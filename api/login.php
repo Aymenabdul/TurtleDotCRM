@@ -56,8 +56,8 @@ try {
     if (!$user['is_active']) {
         http_response_code(403);
         echo json_encode([
-            'error' => 'Account Inactive',
-            'message' => 'Your account has been deactivated. Please contact the support team to reactivate your account.'
+            'error' => 'Account Deactivated',
+            'message' => 'your account has been deactivated contact your admin to activate'
         ]);
         exit;
     }

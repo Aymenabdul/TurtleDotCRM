@@ -77,9 +77,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['flash_msg'] = "Configuration synced for the team!";
             } elseif ($_POST['action'] === 'delete') {
                 $id = $_POST['id'];
-                $stmt = $pdo->prepare("DELETE FROM teams WHERE id = ?");
-                $stmt->execute([$id]);
-                $_SESSION['flash_msg'] = "Team removed from system.";
+                try {
+                    $pdo->beginTransaction();
+
+                    // First delete all users in this team
+                    $stmtUsers = $pdo->prepare("DELETE FROM users WHERE team_id = ?");
+                    $stmtUsers->execute([$id]);
+
+                    // Then delete the team itself
+                    $stmt = $pdo->prepare("DELETE FROM teams WHERE id = ?");
+                    $stmt->execute([$id]);
+
+                    $pdo->commit();
+                    $_SESSION['flash_msg'] = "Team and all its members removed from system.";
+                } catch (PDOException $e) {
+                    $pdo->rollBack();
+                    throw $e;
+                }
             } elseif ($_POST['action'] === 'toggle_status') {
                 $id = $_POST['id'];
                 $status = $_POST['status'];
@@ -992,7 +1006,7 @@ startLayout('Team Command Center', $user);
 
         if (type === 'delete') {
             title.innerText = 'Unit Decommission';
-            text.innerText = `Protocol engaged. Are you certain you want to remove ${name} from the active grid? This action is permanent.`;
+            text.innerText = `Protocol engaged. Are you certain you want to remove ${name} from the active grid? This will also delete all users associated with this team. This action is permanent.`;
             icon.innerHTML = '<i class="fa-solid fa-radiation"></i>';
             submitBtn.innerText = 'Execute Removal';
             formAction.value = 'delete';
