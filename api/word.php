@@ -59,9 +59,32 @@ try {
             exit;
         }
 
+        // Check if the requested team is the Tester team
+        $teamStmt = $pdo->prepare("SELECT name FROM teams WHERE id = ?");
+        $teamStmt->execute([$teamId]);
+        $teamName = $teamStmt->fetchColumn();
+        $isTesterTeam = ($teamName === 'Tester' || $teamName === 'Testers');
+
         // Search condition
         $where = "WHERE d.team_id = :team_id";
         $params = [':team_id' => $teamId];
+
+        if ($isTesterTeam) {
+            // For Tester team, also show files where any member is assigned
+            $where = "WHERE (d.team_id = :team_id_1 OR EXISTS (
+                SELECT 1 FROM users u 
+                WHERE u.team_id = :team_id_2 
+                AND (
+                    (JSON_VALID(d.assigned_to) AND JSON_CONTAINS(d.assigned_to, CAST(u.id AS JSON)))
+                    OR d.assigned_to = CAST(u.id AS CHAR)
+                    OR d.assigned_to LIKE CONCAT('%\"', u.id, '\"%')
+                )
+            ))";
+            unset($params[':team_id']);
+            $params[':team_id_1'] = $teamId;
+            $params[':team_id_2'] = $teamId;
+        }
+
         if ($search) {
             $where .= " AND d.title LIKE :search";
             $params[':search'] = "%$search%";
@@ -148,10 +171,17 @@ try {
             exit;
         }
 
+        if (isset($data['title'])) {
+            $data['title'] = trim($data['title']);
+            if (empty($data['title']) || $data['title'] === 'undefined') {
+                $data['title'] = 'Untitled Document';
+            }
+        }
+
         $stmt = $pdo->prepare("INSERT INTO word_documents (team_id, title, content, created_by, updated_by) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([
             $data['team_id'],
-            $data['title'],
+            $data['title'] ?? 'Untitled Document',
             $data['content'] ?? '',
             $user['user_id'],
             $user['user_id']
@@ -172,6 +202,10 @@ try {
         $fields = [];
         $params = [];
         if (isset($data['title'])) {
+            $data['title'] = trim($data['title']);
+            if (empty($data['title']) || $data['title'] === 'undefined') {
+                $data['title'] = 'Untitled Document';
+            }
             $fields[] = "title = ?";
             $params[] = $data['title'];
         }

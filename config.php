@@ -15,7 +15,8 @@ try {
     $pdo = new PDO($dsn, $db_user, $db_pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-    
+    $pdo->exec("SET names utf8mb4 COLLATE utf8mb4_unicode_ci");
+
 } catch (PDOException $e) {
     // If database doesn't exist, try to create it
     if ($e->getCode() == 1049) {
@@ -24,11 +25,11 @@ try {
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $pdo->exec("CREATE DATABASE IF NOT EXISTS `$db_name` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             $pdo->exec("USE `$db_name`");
-            
+
             // Initialize schema
             $sql = file_get_contents(__DIR__ . '/database/schema.sql');
             $pdo->exec($sql);
-            
+
         } catch (PDOException $e2) {
             die("Connection failed: " . $e2->getMessage());
         }

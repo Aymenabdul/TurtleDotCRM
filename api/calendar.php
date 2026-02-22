@@ -23,21 +23,20 @@ try {
 
     } elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
-        if (!isset($data['team_id']) || !isset($data['title']) || !isset($data['start_date'])) {
+        if (!isset($data['team_id']) || !isset($data['title']) || !isset($data['start_time'])) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Missing required fields']);
             exit;
         }
 
-        $stmt = $pdo->prepare("INSERT INTO calendar_events (team_id, title, description, start_date, end_date, start_time, end_time, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO calendar_events (team_id, title, description, start_time, end_time, color, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $data['team_id'],
             $data['title'],
             $data['description'] ?? null,
-            $data['start_date'],
-            $data['end_date'] ?? $data['start_date'],
-            $data['start_time'] ?? null,
-            $data['end_time'] ?? null,
+            $data['start_time'],
+            $data['end_time'] ?? $data['start_time'],
+            $data['color'] ?? '#10b981',
             $user['user_id']
         ]);
 
@@ -55,7 +54,7 @@ try {
 
         $fields = [];
         $params = [];
-        foreach (['title', 'description', 'start_date', 'end_date', 'start_time', 'end_time'] as $field) {
+        foreach (['title', 'description', 'start_time', 'end_time', 'color'] as $field) {
             if (isset($data[$field])) {
                 $fields[] = "$field = ?";
                 $params[] = $data[$field];

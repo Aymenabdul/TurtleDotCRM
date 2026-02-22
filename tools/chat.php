@@ -270,11 +270,40 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         color: #94a3b8;
         cursor: pointer;
         transition: 0.12s;
+        position: relative;
     }
 
     .member-item:hover {
         background: rgba(255, 255, 255, 0.07);
         color: #e2e8f0;
+    }
+
+    .member-delete-btn {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ef4444;
+        opacity: 0;
+        transition: all 0.2s;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+    }
+
+    .member-item:hover .member-delete-btn {
+        opacity: 1;
+    }
+
+    .member-delete-btn:hover {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
     }
 
     .member-avatar {
@@ -1820,7 +1849,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                 </div>
             </div>
             <div class="chat-header-actions" style="position:relative;">
-                <div class="call-actions" id="callActions">
+                <div class="call-actions" id="callActions" style="display: none;">
                     <button class="btn-call voice" id="btnVoiceCall" onclick="startCall('voice')" title="Voice Call">
                         <i class="fa-solid fa-phone"></i>
                         <span class="call-tooltip">Voice Call</span>
@@ -2284,8 +2313,43 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                     <div class="member-name-text">${escHtml(name)}</div>
                     <div class="member-last-msg">${escHtml(preview)}</div>
                 </div>
+                <button class="member-delete-btn" onclick="event.stopPropagation(); deleteRecentChat(${p.id}, '${escAttr(name)}')" title="Delete Chat">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
             </div>`;
         }).join('');
+    }
+
+    async function deleteRecentChat(userId, name) {
+        const ok = await showConfirm('Delete Conversation', `Permanently delete all messages with <strong>${escHtml(name)}</strong>? This action cannot be undone.`, 'danger');
+        if (!ok) return;
+
+        try {
+            const dmChannel = `dm-${Math.min(CURRENT_USER, userId)}-${Math.max(CURRENT_USER, userId)}`;
+            const res = await fetch('/api/chat.php', {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'delete_recent_dm',
+                    team_id: TEAM_ID,
+                    channel: dmChannel
+                }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const json = await res.json();
+            if (json.success) {
+                Notify.ok('Conversation deleted');
+                // If we are currently in this DM, switch back to General
+                if (isDmView && currentChannel === dmChannel) {
+                    switchChannel('General', null);
+                }
+                loadRecentDms();
+            } else {
+                Notify.err(json.message || 'Failed to delete conversation');
+            }
+        } catch (e) {
+            console.error('deleteRecentChat error:', e);
+            Notify.err('Server error');
+        }
     }
 
     function renderSearchResults(list) {
@@ -2386,9 +2450,9 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                     let bodyHtml = escHtml(msg.message);
                     bodyHtml = bodyHtml.replace(/\[attachment:(.*?)\]/g, (match, url) => {
                         const ext = url.split('.').pop().toLowerCase();
-                        const isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
-                        const isVid = ['mp4', 'webm', 'ogg', 'mov'].includes(ext);
-                        const isAud = ['mp3', 'wav', 'm4a'].includes(ext);
+                        const isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
+                        const isVid = ['mp4', 'webm', 'ogg', 'mov', 'm4v', 'avi', 'mkv', 'flv'].includes(ext);
+                        const isAud = ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'].includes(ext);
 
                         if (isImg) {
                             return `<a href="${url}" target="_blank"><img src="${url}" class="chat-attachment-img" alt="Image"></a>`;
@@ -2500,7 +2564,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
                 // Friendly error for size limit
                 if (errMsg.includes('POST Content-Length') || errMsg.includes('exceeds the limit')) {
-                    errMsg = 'File too large (exceeds 100MB limit)';
+                    errMsg = 'File too large (exceeds 1GB limit)';
                 }
 
                 if (errMsg.length > 100) errMsg = errMsg.substring(0, 100) + '...';
@@ -3088,9 +3152,15 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     }
 
     /* ══════════════ POLLING ══════════════ */
+    let pollCounter = 0;
     function startPolling() {
         if (pollTimer) clearInterval(pollTimer);
-        pollTimer = setInterval(loadMessages, 3500);
+        pollTimer = setInterval(() => {
+            loadMessages();
+            pollCounter++;
+            // Refresh sidebar list every 2 polls (~7 seconds)
+            if (pollCounter % 2 === 0) loadRecentDms();
+        }, 3500);
     }
 
     /* ══════════════ BOOT ══════════════ */
@@ -3113,7 +3183,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
 
 
-<?php include __DIR__ . '/../src/components/ui/call-overlay.php'; ?>
+
 <?php include __DIR__ . '/../src/components/ui/glass-toast.php'; ?>
 
 <?php endLayout(); ?>

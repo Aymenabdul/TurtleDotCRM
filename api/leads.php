@@ -14,15 +14,35 @@ try {
             echo json_encode(['success' => false, 'message' => 'Team ID required']);
             exit;
         }
+        // Check if the requested team is the Tester team
+        $teamStmt = $pdo->prepare("SELECT name FROM teams WHERE id = ?");
+        $teamStmt->execute([$teamId]);
+        $teamName = $teamStmt->fetchColumn();
+        $isTesterTeam = ($teamName === 'Tester' || $teamName === 'Testers');
 
-        $stmt = $pdo->prepare("
+        $sql = "
             SELECT l.*, u.full_name as assigned_to_name 
             FROM leads l
             LEFT JOIN users u ON l.assigned_to = u.id
             WHERE l.team_id = ?
-            ORDER BY l.created_at DESC
-        ");
-        $stmt->execute([$teamId]);
+        ";
+        $params = [$teamId];
+
+        if ($isTesterTeam) {
+            $sql = "
+                SELECT l.*, u.full_name as assigned_to_name 
+                FROM leads l
+                LEFT JOIN users u ON l.assigned_to = u.id
+                WHERE (l.team_id = ? OR (l.assigned_to IS NOT NULL AND EXISTS (
+                    SELECT 1 FROM users u2 WHERE u2.id = l.assigned_to AND u2.team_id = ?
+                )))
+            ";
+            $params = [$teamId, $teamId];
+        }
+
+        $sql .= " ORDER BY l.created_at DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         $leads = $stmt->fetchAll();
 
         echo json_encode(['success' => true, 'data' => $leads]);

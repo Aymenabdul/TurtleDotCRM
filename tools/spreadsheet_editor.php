@@ -969,9 +969,9 @@ try {
                         class="fa-solid fa-align-center"></i></button>
                 <button class="tool-btn btn-small" onclick="runCmd('textAlign', 'right')" title="Align Right"><i
                         class="fa-solid fa-align-right"></i></button>
-                <div class="tool-divider"></div>
                 <button class="tool-btn btn-small" onclick="runCmd('whiteSpace', 'wrap')" id="btnWrap"
-                    title="Wrap Text"><i class="fa-solid fa-wrap-text"></i></button>
+                    title="Wrap Text"><i class="fa-solid fa-turn-down"
+                        style="transform: rotate(90deg) scaleX(-1); font-size: 0.8rem;"></i></button>
             </div>
 
             <!-- Colors -->
@@ -1100,6 +1100,8 @@ try {
         let selectionEnd = { r: 0, c: 0 };
         let isDragging = false;
         let isSaving = false;
+        let isEditing = false;
+        let currentAssignedTo = [];
 
         // Dynamic sizes
         let colWidths = {};
@@ -1279,9 +1281,10 @@ try {
                     // Populate Date Info
                     const dateInfo = document.getElementById('dateInfo');
                     if (json.data.created_at || json.data.updated_at) {
-                        const created = json.data.created_at ? new Date(json.data.created_at).toLocaleDateString() : '-';
-                        const updated = json.data.updated_at ? new Date(json.data.updated_at).toLocaleDateString() : '-';
-                        dateInfo.innerHTML = `<span>Created: ${created}</span><span>Updated: ${updated}</span>`;
+                        const formatOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+                        const created = json.data.created_at ? new Date(json.data.created_at).toLocaleString(undefined, formatOptions) : '-';
+                        const updated = json.data.updated_at ? new Date(json.data.updated_at).toLocaleString(undefined, formatOptions) : '-';
+                        dateInfo.innerHTML = `<span id="createdAtDisplay">Created: ${created}</span><span id="updatedAtDisplay">Updated: ${updated}</span>`;
                     }
 
                     try {
@@ -1400,10 +1403,19 @@ try {
 
             const menu = document.getElementById('sheetContextMenu');
             menu.style.display = 'flex';
-            menu.style.left = e.clientX + 'px';
-            menu.style.top = (e.clientY - menu.offsetHeight - 5) + 'px'; // Show above or near cursor
 
-            // Adjust if off screen logic if needed
+            // Positioning Logic
+            const menuWidth = 160;
+            const menuHeight = menu.offsetHeight || 120;
+            let x = e.clientX;
+            let y = e.clientY - menuHeight - 10;
+
+            // Ensure within bounds
+            if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
+            if (y < 0) y = e.clientY + 10;
+
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
         }
 
         function deleteSheet() {
@@ -1419,15 +1431,15 @@ try {
             closeSheetMenu();
 
             if (typeof Confirm !== 'undefined') {
-                Confirm.show(
-                    'Delete Sheet?',
-                    `Are you sure you want to delete "${sheetName}"? This cannot be undone.`,
-                    'Delete',
-                    'danger',
-                    () => {
+                Confirm.show({
+                    title: 'Delete Sheet?',
+                    text: `Are you sure you want to delete "${sheetName}"? This cannot be undone.`,
+                    confirmText: 'Delete',
+                    type: 'danger',
+                    onConfirm: () => {
                         performDeleteSheet();
                     }
-                );
+                });
             } else {
                 if (confirm(`Delete sheet "${sheetName}"?`)) {
                     performDeleteSheet();
@@ -1622,6 +1634,14 @@ try {
                 const json = await res.json();
                 if (json.success) {
                     document.getElementById('saveIndicator').innerHTML = '<i class="fa-regular fa-circle-check"></i> Saved';
+
+                    // Update Updated At time
+                    if (json.updated_at) {
+                        const updated = new Date(json.updated_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        const upDisplay = document.getElementById('updatedAtDisplay');
+                        if (upDisplay) upDisplay.innerText = `Updated: ${updated}`;
+                    }
+
                     if (window.Toast) Toast.success("Saved", "Spreadsheet saved");
                 }
             } catch (e) {
@@ -1742,8 +1762,6 @@ try {
         });
 
         // --- Advanced Interaction ---
-
-        let isEditing = false;
 
         function getCell(r, c) {
             return document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
@@ -2040,12 +2058,30 @@ try {
                     if (!sheetData[key].s) sheetData[key].s = {};
 
                     sheetData[key].s[prop] = val;
+
+                    // Special case for textAlign in flex container
+                    if (prop === 'textAlign') {
+                        let jc = val === 'left' ? 'flex-start' : (val === 'right' ? 'flex-end' : 'center');
+                        sheetData[key].s['justifyContent'] = jc;
+                    }
+
                     const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
-                    if (cell) cell.style[prop] = val;
+                    if (cell) {
+                        cell.style[prop] = val;
+                        if (prop === 'textAlign') {
+                            cell.style.justifyContent = val === 'left' ? 'flex-start' : (val === 'right' ? 'flex-end' : 'center');
+                        }
+                        if (prop === 'justifyContent') cell.style.justifyContent = val;
+                        if (prop === 'whiteSpace') {
+                            cell.style.whiteSpace = val;
+                            cell.style.overflowWrap = val === 'normal' ? 'anywhere' : 'normal';
+                            cell.style.wordBreak = val === 'normal' ? 'break-word' : 'normal';
+                        }
+                    }
                 }
             }
 
-            updateToolbarUI(sheetData[`${activeCell.r}-${activeCell.c}`].s);
+            updateToolbarUI(sheetData[`${activeCell.r}-${activeCell.c}`]?.s);
             setUnsaved();
         }
 

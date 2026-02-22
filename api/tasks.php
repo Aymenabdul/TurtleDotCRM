@@ -14,16 +14,37 @@ try {
             echo json_encode(['success' => false, 'message' => 'Team ID required']);
             exit;
         }
+        // Check if the requested team is the Tester team
+        $teamStmt = $pdo->prepare("SELECT name FROM teams WHERE id = ?");
+        $teamStmt->execute([$teamId]);
+        $teamName = $teamStmt->fetchColumn();
+        $isTesterTeam = ($teamName === 'Tester' || $teamName === 'Testers');
 
-        $stmt = $pdo->prepare("
+        $sql = "
             SELECT t.*, u.full_name as assigned_to_name, c.full_name as creator_name 
             FROM tasks t
             LEFT JOIN users u ON t.assigned_to = u.id
             LEFT JOIN users c ON t.created_by = c.id
             WHERE t.team_id = ?
-            ORDER BY t.created_at DESC
-        ");
-        $stmt->execute([$teamId]);
+        ";
+        $params = [$teamId];
+
+        if ($isTesterTeam) {
+            $sql = "
+                SELECT t.*, u.full_name as assigned_to_name, c.full_name as creator_name 
+                FROM tasks t
+                LEFT JOIN users u ON t.assigned_to = u.id
+                LEFT JOIN users c ON t.created_by = c.id
+                WHERE (t.team_id = ? OR (t.assigned_to IS NOT NULL AND EXISTS (
+                    SELECT 1 FROM users u2 WHERE u2.id = t.assigned_to AND u2.team_id = ?
+                )))
+            ";
+            $params = [$teamId, $teamId];
+        }
+
+        $sql .= " ORDER BY t.created_at DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         $tasks = $stmt->fetchAll();
 
         echo json_encode(['success' => true, 'data' => $tasks]);
