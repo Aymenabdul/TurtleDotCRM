@@ -7,8 +7,15 @@ $user = AuthMiddleware::requireAuthAPI();
 $userId = $user['user_id'];
 $data = json_decode(file_get_contents('php://input'), true);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($data['subscription'])) {
-    $subscription = json_encode($data['subscription']);
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['get_key'])) {
+    echo json_encode(['success' => true, 'publicKey' => VAPID_PUBLIC_KEY]);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($data['subscription']) || isset($data['endpoint']))) {
+    // Some libraries send direct sub without wrapping in 'subscription'
+    $subData = isset($data['subscription']) ? $data['subscription'] : $data;
+    $subscription = json_encode($subData);
 
     // Use user_id as identifying factor. We could store multiple per user (one per device).
     // For now, let's store one subscription per user per device unique endpoint.

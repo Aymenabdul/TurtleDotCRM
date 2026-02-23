@@ -68,22 +68,34 @@
 
 <script>
     const Toast = {
-        show: function (title, message, type = 'success') {
+        show: function (title, message, type = 'success', duration = 6000) {
             const container = document.getElementById('toast-container');
+            if (!container) return;
+
             const toast = document.createElement('div');
             toast.className = `glass-toast glass-toast-${type}`;
 
-            const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
+            // Determine if we should show an icon
+            let icon = null;
+            if (type === 'success') icon = 'fa-check-circle';
+            if (type === 'error') icon = 'fa-exclamation-circle';
+            if (type === 'info') icon = 'fa-info-circle';
+            if (type === 'minimal') icon = null; // Minimal mode has no side icon
+
+            const iconHtml = icon ? `
+                <div class="glass-toast-icon">
+                    <i class="fa-solid ${icon}"></i>
+                </div>` : '';
+
+            const titleHtml = title ? `<h4>${title}</h4>` : '';
 
             toast.innerHTML = `
-            <div class="glass-toast-icon">
-                <i class="fa-solid ${icon}"></i>
-            </div>
-            <div class="glass-toast-content">
-                <h4>${title}</h4>
-                <p>${message}</p>
-            </div>
-        `;
+                ${iconHtml}
+                <div class="glass-toast-content">
+                    ${titleHtml}
+                    <div>${message}</div>
+                </div>
+            `;
 
             container.appendChild(toast);
 
@@ -93,12 +105,12 @@
 
             setTimeout(() => {
                 toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 400);
-            }, 4000);
+                setTimeout(() => toast.remove(), 500);
+            }, duration);
         },
-        success: function (title, message) { this.show(title, message, 'success'); },
-        error: function (title, message) { this.show(title, message, 'error'); },
-        info: function (title, message) { this.show(title, message, 'info'); }
+        success: function (title, message, duration) { this.show(title, message, 'success', duration); },
+        error: function (title, message, duration) { this.show(title, message, 'error', duration); },
+        info: function (title, message, duration) { this.show(title, message, 'info', duration); }
     };
 
     // Also export to window for availability in tools

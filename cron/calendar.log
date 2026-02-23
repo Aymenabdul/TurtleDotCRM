@@ -1,0 +1,129 @@
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+/bin/sh: /usr/bin/php: No such file or directory
+[2026-02-23 22:55:03] Sent 2-min reminders for event: team (ID: 15)
+[2026-02-23 23:05:00] Sent 2-min reminders for event: team (ID: 17)
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+PHP Warning:  Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+
+Warning: Constant ONESIGNAL_APP_ID already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 7
+PHP Warning:  Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+
+Warning: Constant ONESIGNAL_REST_API_KEY already defined, this will be an error in PHP 9 in /Users/aymen/Desktop/Turtledot/lead-management/lib/NotificationService.php on line 8
+[2026-02-23 23:50:00] Sent 2-min reminders for event: team (ID: 18)
+[2026-02-23 23:56:00] Sent 2-min reminders for event: standup (ID: 19)
+[2026-02-24 00:01:00] Sent 2-min reminders for event: team (ID: 20)
+[2026-02-24 00:14:00] Sent 2-min reminders for event: chat (ID: 21)

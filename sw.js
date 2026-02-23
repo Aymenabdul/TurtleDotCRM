@@ -70,18 +70,28 @@ self.addEventListener('push', (event) => {
 // Notification Click Event
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
+    const targetUrl = event.notification.data.url || '/';
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            // Find if there is already a window open with our tool
+            // 1. Try to find a window that EXACTLY matches the URL
             for (const client of clientList) {
-                if (client.url.includes('/tools/chat.php') && 'focus' in client) {
+                if (client.url === targetUrl && 'focus' in client) {
                     return client.focus();
                 }
             }
-            // If not, open a new one
+            // 2. Try to find any window on the same tool (chat or calendar)
+            for (const client of clientList) {
+                const isMatchingTool = (targetUrl.includes('calendar.php') && client.url.includes('calendar.php')) ||
+                    (targetUrl.includes('chat.php') && client.url.includes('chat.php'));
+
+                if (isMatchingTool && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // 3. Otherwise, open a new window
             if (clients.openWindow) {
-                return clients.openWindow(event.notification.data.url);
+                return clients.openWindow(targetUrl);
             }
         })
     );

@@ -1066,9 +1066,14 @@ startLayout("Calendar - " . $team['name'], $user);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
+        padding: 1.25rem;
         border-bottom: 1px solid var(--border-color);
+    }
+
+    .cal-upcoming-header>div {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 
     .cal-upcoming-header h3 {
@@ -1099,17 +1104,17 @@ startLayout("Calendar - " . $team['name'], $user);
     }
 
     .cal-notification-status {
-        margin-top: 1rem;
-        padding: 0.75rem;
+        margin: 0 1.25rem 1.25rem;
+        padding: 0.85rem 1rem;
         background: var(--bg-secondary);
         border: 1px dashed var(--border-color);
-        border-radius: 12px;
-        font-size: 0.75rem;
+        border-radius: 14px;
+        font-size: 0.82rem;
         font-weight: 600;
         color: var(--text-muted);
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
     }
 
     .cal-notification-status i {
@@ -1123,7 +1128,7 @@ startLayout("Calendar - " . $team['name'], $user);
     }
 
     .cal-upcoming-list {
-        padding: 0.75rem;
+        padding: 0.5rem 1.25rem;
         max-height: 500px;
         overflow-y: auto;
     }
@@ -1143,11 +1148,12 @@ startLayout("Calendar - " . $team['name'], $user);
     }
 
     .cal-upcoming-dot {
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
-        margin-top: 5px;
+        margin-top: 3px;
         flex-shrink: 0;
+        box-shadow: 0 0 0 3px var(--bg-main), 0 0 0 4px var(--border-color);
     }
 
     .cal-upcoming-info {
@@ -1218,6 +1224,135 @@ startLayout("Calendar - " . $team['name'], $user);
         .cal-controls {
             padding: 0.5rem 0.75rem;
         }
+    }
+
+    /* ── Custom Confirm Popup ── */
+    .confirm-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .confirm-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .confirm-box {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 20px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+        width: 400px;
+        max-width: 90vw;
+        overflow: hidden;
+        transform: scale(0.95) translateY(10px);
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .confirm-overlay.open .confirm-box {
+        transform: scale(1) translateY(0);
+    }
+
+    .confirm-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 24px 24px 16px;
+    }
+
+    .confirm-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .confirm-icon.danger {
+        background: #fee2e2;
+        color: #ef4444;
+    }
+
+    .confirm-icon.info {
+        background: #e0f2fe;
+        color: #0ea5e9;
+    }
+
+    .confirm-title {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #1e293b;
+        letter-spacing: -0.01em;
+    }
+
+    .confirm-msg {
+        padding: 0 24px 24px;
+        font-size: 0.95rem;
+        color: #64748b;
+        line-height: 1.6;
+        font-weight: 500;
+    }
+
+    .confirm-actions {
+        display: flex;
+        gap: 12px;
+        padding: 0 24px 24px;
+        justify-content: flex-end;
+    }
+
+    .confirm-btn {
+        padding: 10px 24px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+    }
+
+    .confirm-btn.cancel {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .confirm-btn.cancel:hover {
+        background: #e2e8f0;
+        color: #1e293b;
+    }
+
+    .confirm-btn.danger {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+    }
+
+    .confirm-btn.danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(239, 68, 68, 0.35);
+    }
+
+    .confirm-btn.primary {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+
+    .confirm-btn.primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(16, 185, 129, 0.35);
     }
 </style>
 
@@ -1313,7 +1448,7 @@ startLayout("Calendar - " . $team['name'], $user);
                         <i class="fa-solid fa-bolt"></i>
                         <h3>Upcoming Events</h3>
                     </div>
-                    <button class="cal-test-notify" onclick="testNotification()" title="Test Sound & Alert">
+                    <button class="cal-test-notify" onclick="subscribeToPush()" title="Enable Notifications">
                         <i class="fa-solid fa-bell"></i>
                     </button>
                 </div>
@@ -1453,19 +1588,60 @@ startLayout("Calendar - " . $team['name'], $user);
     </div>
 </div>
 
+<!-- ============ CUSTOM CONFIRM POPUP ============ -->
+<div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+        <div class="confirm-header">
+            <div class="confirm-icon danger" id="confirmIcon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        </div>
+        <div class="confirm-msg" id="confirmMsg">This action cannot be undone.</div>
+        <div class="confirm-actions">
+            <button class="confirm-btn cancel" id="confirmCancelBtn">Cancel</button>
+            <button class="confirm-btn danger" id="confirmOkBtn">Confirm</button>
+        </div>
+    </div>
+</div>
+
 <?php include __DIR__ . '/../src/components/ui/glass-toast.php'; ?>
 
 <script>
     const TEAM_ID = <?php echo $teamId; ?>;
     let events = [];
-    // Ensure IDs are treated as strings for reliable Set matching
-    let rawNotified = JSON.parse(sessionStorage.getItem('notified_events') || '[]');
+    // Use localStorage for persistence across reloads/sessions
+    let rawNotified = JSON.parse(localStorage.getItem('notified_events') || '[]');
     let notifiedEvents = new Set(rawNotified.map(id => String(id)));
     let currentDate = new Date();
 
-    // Premium Sound Alert
-    const NOTIFY_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    NOTIFY_SOUND.volume = 0.5;
+    // Support for background push notifications
+    let pushSubscription = null;
+
+    // Premium Sound Alert - Using local asset with absolute-style web path
+    const NOTIFY_SOUND = new Audio('/assets/images/mixkit-doorbell-tone-2864.wav');
+    NOTIFY_SOUND.volume = 0.7;
+    NOTIFY_SOUND.preload = 'auto';
+    let audioUnlocked = false;
+
+    // Aggressive audio priming on any user interaction
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        NOTIFY_SOUND.play().then(() => {
+            NOTIFY_SOUND.pause();
+            NOTIFY_SOUND.currentTime = 0;
+            audioUnlocked = true;
+            console.log("✅ Notification system audio unlocked");
+        }).catch(e => {
+            // This is expected if they haven't interacted yet
+            console.warn("⏳ Audio unlock pending user gesture...");
+        });
+    }
+
+    // Listen for common interactions to unlock
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+        document.addEventListener(evt, unlockAudio, { once: true });
+    });
 
     const COLOR_PRESETS = [
         '#10b981', '#3b82f6', '#8b5cf6', '#f59e0b',
@@ -1696,6 +1872,20 @@ startLayout("Calendar - " . $team['name'], $user);
 
             if (json.success) {
                 Toast.success(isEdit ? 'Updated' : 'Created', isEdit ? 'Event updated successfully.' : 'Event added to the calendar.');
+
+                // If new event, we can't easily trigger background push from frontend here 
+                // because we want the SERVER to send push to others.
+                // The API should handle sending push to team members.
+
+                if (isEdit) {
+                    const idStr = String(data.id);
+                    if (notifiedEvents.has(idStr)) {
+                        console.log(`[Notif] Resetting notification status for edited event: ${idStr}`);
+                        notifiedEvents.delete(idStr);
+                        localStorage.setItem('notified_events', JSON.stringify([...notifiedEvents]));
+                    }
+                }
+
                 closeEventModal();
                 loadEvents();
             } else {
@@ -1714,7 +1904,13 @@ startLayout("Calendar - " . $team['name'], $user);
         const id = document.getElementById('eventId').value;
         if (!id) return;
 
-        if (!confirm('Delete this event? This cannot be undone.')) return;
+        const confirmed = await showConfirm(
+            'Delete Event?',
+            'Are you sure you want to remove this event from the calendar? This action cannot be undone.',
+            'danger'
+        );
+
+        if (!confirmed) return;
 
         try {
             await fetch('/api/calendar.php', {
@@ -1834,15 +2030,24 @@ startLayout("Calendar - " . $team['name'], $user);
         const now = new Date();
         const nowUtc = now.getTime();
 
-        // Update Status UI
         const statusEl = document.getElementById('notifStatus');
         if (statusEl) {
-            statusEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Monitoring ${events.length} Events...`;
+            statusEl.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="width:8px; height:8px; background:#10b981; border-radius:50%; box-shadow:0 0 8px #10b981; animation: pulse 2s infinite;"></span>
+                    <span>Monitoring ${events.length} Events (Live)</span>
+                    <button onclick="testOSNotification()" style="margin-left:auto; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:10px; text-decoration:underline;">Test OS Alert</button>
+                </div>
+            `;
         }
 
         events.forEach(event => {
             const idStr = String(event.id);
-            if (!event.start_time || notifiedEvents.has(idStr)) return;
+            if (!event.start_time) return;
+
+            if (notifiedEvents.has(idStr)) {
+                return;
+            }
 
             // Robust and consistent parsing
             let eventTime;
@@ -1851,45 +2056,214 @@ startLayout("Calendar - " . $team['name'], $user);
                 const cleanDate = event.start_time.replace(/-/g, '/').replace('T', ' ');
                 eventTime = new Date(cleanDate).getTime();
             } catch (e) {
-                console.error("[Notif] Parse error:", event.start_time);
+                console.error("[Notif] Parse error for event:", event.title, event.start_time);
                 return;
             }
 
             if (isNaN(eventTime)) return;
 
             const diff = eventTime - nowUtc;
+            const diffMinutes = Math.floor(diff / 60000);
 
-            // Check window: Trigger if starts within next 1M or started in last 10M
-            if (diff <= 60000 && diff >= -600000) {
-                console.warn(`[Notif] TRIGGER for: ${event.title} (ID: ${event.id}) | Diff: ${Math.round(diff / 1000)}s`);
+
+            // Trigger Window: 2 minutes (120,000ms) before the event starts
+            // and up to 5 minutes after it started (in case they just opened the tab)
+            if (diff <= 120000 && diff >= -300000) {
                 showEventAlert(event);
                 notifiedEvents.add(idStr);
-                sessionStorage.setItem('notified_events', JSON.stringify([...notifiedEvents]));
+                localStorage.setItem('notified_events', JSON.stringify([...notifiedEvents]));
+            }
+
+            // --- AUTO DELETE PASSED EVENTS ---
+            // If the event has ended (passed its end_time), delete it automatically
+            const endTimeStr = event.end_time || event.start_time; // Fallback to start_time if no end
+            const cleanEndDate = endTimeStr.replace(/-/g, '/').replace('T', ' ');
+            const endTime = new Date(cleanEndDate).getTime();
+
+            // Delete if current time is past end time (with a 10-second grace period)
+            if (nowUtc > (endTime + 10000)) {
+                autoDeleteEvent(event.id);
             }
         });
+    }
+
+    async function autoDeleteEvent(id) {
+        try {
+            await fetch('/api/calendar.php', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            // Reload silently after auto-delete
+            events = events.filter(e => e.id != id);
+            renderCalendar();
+            renderUpcoming();
+            updateStats();
+        } catch (err) {
+            // Silently fail auto-delete
+        }
     }
 
     function showEventAlert(event) {
         const time = formatTime(event.start_time);
 
-        // Play Sound
-        NOTIFY_SOUND.play().catch(e => console.log('Audio playback blocked until user interacts with page.'));
+        // 1. Play Doorbell Sound
+        NOTIFY_SOUND.play().catch(e => { });
 
-        // Custom Glass Toast
-        Toast.info('Event Starting Now', `<b>${escHtml(event.title)}</b> is starting at ${time}.`, 10000);
+        // 2. Custom Glass Toast (Minimalist - Logo Focused)
+        try {
+            Toast.show(null, `
+                <div style="display:flex; align-items:center; gap:16px; padding:2px 0;">
+                    <div style="position:relative;">
+                        <img src="/assets/images/turtle_logo_192.png" style="width:42px; height:42px; border-radius:12px; box-shadow:0 6px 20px rgba(16,185,129,0.3);">
+                        <span style="position:absolute; top:-2px; right:-2px; width:11px; height:11px; background:#ef4444; border:2px solid #fff; border-radius:50%; animation: pulse 1s infinite;"></span>
+                    </div>
+                    <div>
+                        <div style="font-weight:900; color:#1e293b; font-size:1.05rem; line-height:1.2; letter-spacing:0.02em; text-transform: uppercase;">${escHtml(event.title)}</div>
+                        <div style="font-size:0.8rem; color:#64748b; font-weight:700; margin-top:4px; display:flex; align-items:center; gap:5px;">
+                            <i class="fa-regular fa-clock" style="color:var(--primary); font-size:0.85rem;"></i> Starts at ${time}
+                        </div>
+                    </div>
+                </div>
+            `, 'minimal', 20000);
+        } catch (e) { }
 
-        // Browser Notification
-        if ("Notification" in window && Notification.permission === "granted") {
-            new Notification("Event Starting Now", {
-                body: `${event.title} is starting at ${time}`,
-                icon: 'https://cdn-icons-png.flaticon.com/512/3652/3652191.png'
+        // 3. OS LEVEL - Native Notification (Force Visible)
+        if (Notification.permission === "granted") {
+            const notifOptions = {
+                body: `Starts at ${time}`,
+                icon: '/assets/images/turtle_logo_192.png',
+                badge: '/assets/images/turtle_logo_192.png',
+                vibrate: [500, 110, 500, 110, 500, 110, 500],
+                tag: 'event-' + String(event.id),
+                renotify: true,
+                requireInteraction: true,
+                silent: false,
+                data: { url: window.location.href }
+            };
+
+            const title = "Meeting: " + event.title;
+
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, notifOptions);
+                }).catch(err => {
+                    new Notification(title, notifOptions);
+                });
+            } else {
+                new Notification(title, notifOptions);
+            }
+        }
+    }
+
+    function testOSNotification() {
+        if (!("Notification" in window)) {
+            Toast.error("Error", "OS notifications not supported.");
+            return;
+        }
+
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                const options = {
+                    body: "Test notification from TurtleDot. OS alerts are active!",
+                    icon: '/assets/images/turtle_logo_192.png',
+    badge: '/assets/images/turtle_logo_192.png',
+                    requireInteraction: true,
+                    silent: false,
+                    tag: 'test-ping'
+                };
+
+                // Try both methods
+                try {
+                    new Notification("TurtleDot Alert 🐢", options);
+                } catch(e) {}
+
+                if (navigator.serviceWorker) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.showNotification("TurtleDot Alert 🐢", options);
+                    });
+                }
+                
+                Toast.success("Test Sent", "Check your notification center.");
+            } else {
+                Toast.error("Blocked", "Notifications are disabled.");
+            }
+        });
+    }
+
+    async function subscribeToPush() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            return;
+        }
+
+        try {
+            const registration = await navigator.serviceWorker.ready;
+
+            // Get VAPID key from server if needed, or use a constant
+            // For this app, it should be in config.php but we need it here.
+            // We'll fetch it from a small helper if needed, or assume it's global.
+            // Since we don't have it globally here, let's just request permission first.
+
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                Toast.error("Permission Denied", "Notifications were blocked.");
+                return;
+            }
+
+            // If already subscribed, just play sound to confirm it works
+            if (localStorage.getItem('push_subscribed') === 'true') {
+                NOTIFY_SOUND.play().catch(unlockAudio);
+                Toast.success("Subscribed", "Notifications are active. You should have heard the chime!");
+                return;
+            }
+
+            // Fetch VAPID Key
+            const keyRes = await fetch('/api/push_subscription.php?get_key=1');
+            const keyData = await keyRes.json();
+
+            if (!keyData.publicKey) throw new Error("VAPID Key not found");
+
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: keyData.publicKey
             });
+
+            await fetch('/api/push_subscription.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(subscription)
+            });
+
+            localStorage.setItem('push_subscribed', 'true');
+            Toast.success("Notifications Enabled", "You will now receive alerts even when the tab is closed.");
+
+            // Play sound as confirmation
+            NOTIFY_SOUND.play().catch(e => console.warn("Sound blocked despite click"));
+
+            // Update UI status
+            const statusEl = document.getElementById('notifStatus');
+            if (statusEl) {
+                statusEl.innerHTML = `
+                    <i class="fa-solid fa-bell-check text-emerald-500"></i> 
+                    <span>Push Notifications Active</span>
+                    <button onclick="NOTIFY_SOUND.play()" style="margin-left:auto; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:10px; text-decoration:underline;">Test Sound</button>
+                `;
+            }
+
+        } catch (err) {
+            console.error('Push subscription failed:', err);
+            Toast.error("Notification Error", "Could not enable background push.");
         }
     }
 
     function testNotification() {
-        NOTIFY_SOUND.play().catch(e => {
-            alert('Please click anywhere on the page first to allow audio playback.');
+        NOTIFY_SOUND.play().catch(async (e) => {
+            await showConfirm(
+                'Unlock Audio',
+                'Browsers blocks sound until you interact with the page. Please click "Unlock" to enable alerts.',
+                'info'
+            );
+            unlockAudio();
         });
         Toast.success('Test Alert', 'Sound and notifications are working correctly.');
         if ("Notification" in window) {
@@ -1899,6 +2273,44 @@ startLayout("Calendar - " . $team['name'], $user);
                 Notification.requestPermission();
             }
         }
+    }
+
+    /* ── Custom confirm popup helper ── */
+    function showConfirm(title, message, type = 'danger') {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('confirmOverlay');
+            const titleEl = document.getElementById('confirmTitle');
+            const msgEl = document.getElementById('confirmMsg');
+            const iconEl = document.getElementById('confirmIcon');
+            const okBtn = document.getElementById('confirmOkBtn');
+            const cancelBtn = document.getElementById('confirmCancelBtn');
+
+            titleEl.textContent = title;
+            msgEl.innerHTML = message;
+
+            // Icon setup
+            iconEl.className = 'confirm-icon ' + (type === 'danger' ? 'danger' : 'info');
+            iconEl.innerHTML = type === 'danger'
+                ? '<i class="fa-solid fa-triangle-exclamation"></i>'
+                : '<i class="fa-solid fa-circle-info"></i>';
+
+            // Button style
+            okBtn.className = 'confirm-btn ' + (type === 'danger' ? 'danger' : 'primary');
+            okBtn.textContent = type === 'danger' ? 'Delete' : 'Confirm';
+
+            overlay.classList.add('open');
+
+            function cleanup() {
+                overlay.classList.remove('open');
+                okBtn.onclick = null;
+                cancelBtn.onclick = null;
+                overlay.onclick = null;
+            }
+
+            okBtn.onclick = () => { cleanup(); resolve(true); };
+            cancelBtn.onclick = () => { cleanup(); resolve(false); };
+            overlay.onclick = (e) => { if (e.target === overlay) { cleanup(); resolve(false); } };
+        });
     }
 
     function requestNotificationPermission() {
