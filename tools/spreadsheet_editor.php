@@ -8,7 +8,7 @@ $teamId = $_GET['team_id'] ?? null;
 $sheetId = $_GET['id'] ?? null;
 
 if (!$teamId) {
-    header("Location: /manage-teams.php");
+    header("Location: /manage_teams.php");
     exit;
 }
 
@@ -18,7 +18,7 @@ try {
     $team = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$team) {
-        header("Location: /manage-teams.php");
+        header("Location: /manage_teams.php");
         exit;
     }
 } catch (PDOException $e) {
@@ -914,7 +914,8 @@ try {
     <!-- Top Bar -->
     <div class="excel-title-bar">
         <div class="title-left">
-            <a href="/tools/timesheet.php?team_id=<?php echo $teamId; ?>" class="back-btn" title="Back to Dashboard">
+            <?php $is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin'; ?>
+            <a href="<?php echo $is_admin ? '/admin_dashboard.php' : '/index.php'; ?>" class="back-btn" title="Back to Dashboard">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
             <div class="app-icon"><i class="fa-solid fa-table"></i></div>

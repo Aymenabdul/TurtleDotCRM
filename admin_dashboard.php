@@ -5,8 +5,9 @@ require_once __DIR__ . '/config.php';
 
 // Require authentication and ensure user is an admin
 $user = AuthMiddleware::requireAuth();
+$is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin';
 
-if ($user['role'] !== 'admin') {
+if (!$is_admin) {
     header('Location: /index.php');
     exit;
 }
@@ -23,12 +24,12 @@ $stats = [
 ];
 
 try {
-    // Number of Users
-    $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE is_client = 0");
+    // Number of Users (non-admins)
+    $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE role != 'admin'");
     $stats['users'] = $stmt->fetchColumn();
 
-    // Number of Clients 
-    $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE is_client = 1");
+    // Total Users metric (since is_client doesn't exist yet)
+    $stmt = $pdo->query("SELECT COUNT(*) FROM users");
     $stats['clients'] = $stmt->fetchColumn();
 
     // Check if teams exist, if not set gracefully, if there is a teams table

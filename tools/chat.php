@@ -7,7 +7,7 @@ $user = AuthMiddleware::requireAuth();
 $teamId = $_GET['team_id'] ?? null;
 
 if (!$teamId) {
-    header("Location: /manage-teams.php");
+    header("Location: /manage_teams.php");
     exit;
 }
 
@@ -17,12 +17,15 @@ try {
     $team = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$team) {
-        header("Location: /manage-teams.php");
+        header("Location: /manage_teams.php");
         exit;
     }
 
     $teamTools = json_decode($team['tools'] ?? '[]', true);
-    if (!in_array('chat', $teamTools)) {
+    // Support both the JSON tools array and the legacy column flag
+    $isEnabled = in_array('chat', $teamTools) || (isset($team['tool_chat']) && $team['tool_chat'] == 1);
+
+    if (!$isEnabled) {
         die("This tool is not enabled for this team.");
     }
 } catch (PDOException $e) {
@@ -1796,6 +1799,163 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         margin-top: 8px;
     }
 
+    /* ── Pulse Premium Notification Toast ── */
+    #pulseNotificationStack {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        pointer-events: none;
+    }
+
+    .pulse-toast {
+        width: 380px;
+        max-width: calc(100vw - 48px);
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(24px) saturate(200%);
+        -webkit-backdrop-filter: blur(24px) saturate(200%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1),
+            0 2px 8px rgba(0, 0, 0, 0.05),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+        padding: 18px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        pointer-events: auto;
+        cursor: pointer;
+        animation: toast-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+    }
+
+    .pulse-toast:hover {
+        transform: translateY(-6px) scale(1.02);
+        background: rgba(255, 255, 255, 0.85);
+        box-shadow: 0 40px 100px rgba(0, 0, 0, 0.15);
+        border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .pulse-toast::before {
+        content: '';
+        position: absolute;
+        width: 4px;
+        height: 40px;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        background: linear-gradient(to bottom, #10b981, #3b82f6);
+        border-radius: 0 4px 4px 0;
+    }
+
+    .pulse-toast-avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 800;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #10b981, #059669);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .pulse-toast-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .pulse-toast-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #1a1c1e;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2px;
+    }
+
+    .pulse-toast-time {
+        font-size: 0.72rem;
+        color: #8e9196;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .pulse-toast-body {
+        font-size: 0.9rem;
+        color: #44474e;
+        line-height: 1.5;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 400;
+    }
+
+    .pulse-toast-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.04);
+        border: none;
+        color: #666;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        cursor: pointer;
+        opacity: 0;
+        transition: all 0.2s;
+    }
+
+    .pulse-toast:hover .pulse-toast-close {
+        opacity: 1;
+    }
+
+    .pulse-toast-close:hover {
+        background: rgba(0, 0, 0, 0.1);
+        color: #1a1c1e;
+        transform: rotate(90deg);
+    }
+
+    @keyframes toast-in {
+        from {
+            opacity: 0;
+            transform: translateX(40px) scale(0.95) skewY(1deg);
+            filter: blur(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0) scale(1) skewY(0deg);
+            filter: blur(0);
+        }
+    }
+
+    @keyframes toast-out {
+        to {
+            opacity: 0;
+            transform: scale(0.9) translateY(-20px);
+            filter: blur(15px);
+        }
+    }
+
+    .pulse-toast.hiding {
+        animation: toast-out 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
     .chat-attachment-audio {
         width: 100%;
     }
@@ -1809,12 +1969,14 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
         <!-- Workspace header -->
         <div class="ws-header">
-            <div class="ws-logo"><?php echo strtoupper(substr($team['name'], 0, 1)); ?></div>
+            <div class="ws-logo"><?php echo strtoupper(substr($team['name'] ?? 'T', 0, 1)); ?></div>
             <div class="ws-info">
-                <div class="ws-name"><?php echo htmlspecialchars($team['name']); ?></div>
-                <div class="ws-sub">Team Workspace</div>
+                <div class="ws-name"><?php echo htmlspecialchars($team['name'] ?? 'Turtle Workspace'); ?></div>
+                <div class="ws-sub"><?php echo $team ? 'Team Workspace' : 'Global Workspace'; ?></div>
             </div>
-            <a href="javascript:history.back()" class="ws-back" title="Back to Dashboard">
+            <?php $is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin'; ?>
+            <a href="<?php echo $is_admin ? '/admin_dashboard.php' : '/index.php'; ?>" class="ws-back"
+                title="Back to Dashboard">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
         </div>
@@ -1832,9 +1994,11 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         <div class="sidebar-section" id="channelsSection">
             <div class="sidebar-section-header">
                 <span>Channels</span>
-                <button class="sidebar-add-btn" onclick="openModal()" title="Create channel">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
+                <?php if ($user['role'] === 'admin'): ?>
+                    <button class="sidebar-add-btn" onclick="openModal()" title="Create channel">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                <?php endif; ?>
             </div>
             <div id="channelList">
                 <!-- filled by JS -->
@@ -1897,22 +2061,26 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                     <div class="live-badge-dot"></div>
                     Live
                 </div>
-                <button class="btn-channel-settings" id="btnChannelSettings" onclick="openMembersModal()"
-                    title="Manage channel members">
-                    <i class="fa-solid fa-user-group"></i>
-                </button>
+                <?php if ($user['role'] === 'admin'): ?>
+                    <button class="btn-channel-settings" id="btnChannelSettings" onclick="openMembersModal()"
+                        title="Manage channel members">
+                        <i class="fa-solid fa-user-group"></i>
+                    </button>
+                <?php endif; ?>
                 <button class="btn-channel-settings" id="btnChannelMenu" onclick="toggleChannelMenu(event)"
                     title="Channel options">
                     <i class="fa-solid fa-ellipsis-vertical"></i>
                 </button>
                 <div class="channel-dropdown" id="channelDropdown">
-                    <button class="channel-dropdown-item" onclick="clearAllMessages()">
+                    <button class="channel-dropdown-item" id="clearAllBtn" onclick="clearAllMessages()">
                         <i class="fa-solid fa-broom"></i> Clear All Messages
                     </button>
                     <div class="channel-dropdown-divider"></div>
-                    <button class="channel-dropdown-item danger" id="deleteChannelBtn" onclick="deleteChannel()">
-                        <i class="fa-solid fa-trash"></i> Delete Channel
-                    </button>
+                    <?php if ($user['role'] === 'admin'): ?>
+                        <button class="channel-dropdown-item danger" id="deleteChannelBtn" onclick="deleteChannel()">
+                            <i class="fa-solid fa-trash"></i> Delete Channel
+                        </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -1964,6 +2132,9 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     </main>
 </div>
 
+
+<!-- ============ PULSE NOTIFICATIONS ============ -->
+<div id="pulseNotificationStack"></div>
 
 <!-- ============ CUSTOM CONFIRM POPUP ============ -->
 <div class="confirm-overlay" id="confirmOverlay">
@@ -2076,10 +2247,13 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     </div>
 </div>
 
+<audio id="msgSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
+
 <script>
     /* ── Constants ── */
-    const TEAM_ID = <?php echo (int) $teamId; ?>;
+    const TEAM_ID = <?php echo $teamId ? (int) $teamId : 'null'; ?>;
     const CURRENT_USER = <?php echo (int) $user['user_id']; ?>;
+    const CURRENT_USER_ROLE = '<?php echo strtolower(trim($user['role'])); ?>';
     const AVATAR_COLORS = ['#8b5cf6', '#3b82f6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#10b981'];
 
     /* ── State ── */
@@ -2096,6 +2270,115 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     let mmCurrentTab = 'current';
     let isSearching = false;
     let openMenuMsgId = null;
+
+
+    /* ── Notification Helpers ── */
+    function playNotificationSound() {
+        const sound = document.getElementById('msgSound');
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn('Sound play failed:', e));
+        }
+    }
+
+    function showSystemNotification(title, message) {
+        // 1. Show custom in-app Pulse toast (always show if in app)
+        showPulseToast(title, message);
+
+        // 2. Show native browser notification (only if out of focus/hidden)
+        if (document.visibilityState !== 'visible' || !document.hasFocus()) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                const n = new Notification(title, {
+                    body: message,
+                    icon: '/assets/images/turtle_logo_192.png'
+                });
+                n.onclick = () => {
+                    window.focus();
+                    n.close();
+                };
+            }
+        }
+    }
+
+    function showPulseToast(title, body) {
+        const stack = document.getElementById('pulseNotificationStack');
+        if (!stack) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'pulse-toast';
+
+        const color = avatarColor(title);
+        const ini = initials(title);
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        toast.innerHTML = `
+            <div class="pulse-toast-avatar" style="background:${color}">${ini}</div>
+            <div class="pulse-toast-content">
+                <div class="pulse-toast-title">
+                    <span>${escHtml(title)}</span>
+                    <span class="pulse-toast-time">${time}</span>
+                </div>
+                <div class="pulse-toast-body">${escHtml(body)}</div>
+            </div>
+            <button class="pulse-toast-close" onclick="this.parentElement.remove()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        `;
+
+        toast.onclick = (e) => {
+            if (e.target.closest('.pulse-toast-close')) return;
+            window.focus();
+            // Optional: try to find the user in recentDms to switch?
+            // For now, just bring window to front
+            toast.classList.add('hiding');
+            setTimeout(() => toast.remove(), 400);
+        };
+
+        // Auto-remove after 6 seconds
+        const timer = setTimeout(() => {
+            toast.classList.add('hiding');
+            setTimeout(() => toast.remove(), 400);
+        }, 6000);
+
+        stack.appendChild(toast);
+
+        // Max 3 toasts at once
+        while (stack.children.length > 3) {
+            stack.firstChild.remove();
+        }
+    }
+
+    let lastUnreadState = {};
+
+    function checkUnreadAlerts(dms, chans) {
+        let hasNew = false;
+        const newState = {};
+
+        if (Array.isArray(dms)) {
+            dms.forEach(d => {
+                const key = `dm-${d.user_id}`;
+                newState[key] = d.unread_count || 0;
+                if (newState[key] > (lastUnreadState[key] || 0)) {
+                    showSystemNotification(d.full_name || d.username, 'Sent you a message');
+                    hasNew = true;
+                }
+            });
+        }
+
+        if (Array.isArray(chans)) {
+            chans.forEach(c => {
+                const key = `chan-${c.name}`;
+                newState[key] = c.unread_count || 0;
+                if (newState[key] > (lastUnreadState[key] || 0) && c.name !== currentChannel) {
+                    showSystemNotification(`#${c.name}`, 'New activity in channel');
+                    hasNew = true;
+                }
+            });
+        }
+
+        if (hasNew) playNotificationSound();
+        lastUnreadState = newState;
+    }
 
     /* ── Custom confirm popup helper ── */
     function showConfirm(title, message, type = 'danger') {
@@ -2159,9 +2442,15 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
             const json = await res.json();
             if (json.success && Array.isArray(json.data)) {
                 channels = json.data;
+                // Always ensure General is at the top
+                if (!channels.find(c => c.name === 'General')) {
+                    channels.unshift({ id: null, name: 'General' });
+                }
+            } else {
+                channels = [{ id: null, name: 'General' }];
             }
-            if (channels.length === 0) channels = [{ id: null, name: 'General' }];
             renderChannels();
+            checkUnreadAlerts(recentDms, channels);
         } catch (e) {
             console.error('loadChannels error:', e);
             if (channels.length === 0) {
@@ -2213,9 +2502,9 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
             document.getElementById('headerSubtitle').textContent = 'Team channel';
         }
 
-        // Show delete channel only for non-General
+        // Show delete channel only for admins and non-General
         const delBtn = document.getElementById('deleteChannelBtn');
-        if (delBtn) delBtn.style.display = (name.toLowerCase() === 'general') ? 'none' : '';
+        if (delBtn) delBtn.style.display = (name.toLowerCase() === 'general' || CURRENT_USER_ROLE !== 'admin') ? 'none' : '';
 
         renderChannels();
 
@@ -2238,7 +2527,10 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     }
 
     function switchToDM(userId, name) {
+        if (!userId) return;
         const dmChannel = `dm-${Math.min(CURRENT_USER, userId)}-${Math.max(CURRENT_USER, userId)}`;
+
+        // Update State
         isDmView = true;
         currentChannel = dmChannel;
         currentChannelId = null;
@@ -2247,29 +2539,41 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
         if (pollTimer) clearInterval(pollTimer);
 
-        // Clear search
-        document.getElementById('memberSearch').value = '';
+        // UI Updates
+        const searchInput = document.getElementById('memberSearch');
+        if (searchInput) searchInput.value = '';
         exitSearchMode();
 
-        document.getElementById('headerChannelName').textContent = name;
-        document.getElementById('headerSubtitle').textContent = 'Direct Message';
-        const color = avatarColor(name);
-        document.getElementById('headerIcon').innerHTML = initials(name);
-        document.getElementById('headerIcon').style.background = color;
-        document.getElementById('headerIcon').style.color = '#fff';
-        document.getElementById('messageInput').placeholder = `Message ${name}…`;
-        document.getElementById('btnChannelSettings').style.display = 'none';
+        const hdrName = document.getElementById('headerChannelName');
+        const hdrSub = document.getElementById('headerSubtitle');
+        const hdrIcon = document.getElementById('headerIcon');
+        const msgInp = document.getElementById('messageInput');
+        const btnSet = document.getElementById('btnChannelSettings');
+        const box = document.getElementById('chatMessages');
 
-        // Deselect channels
+        if (hdrName) hdrName.textContent = name;
+        if (hdrSub) hdrSub.textContent = 'Direct Message';
+        if (msgInp) msgInp.placeholder = `Message ${name}…`;
+        if (btnSet) btnSet.style.display = 'none';
+
+        if (hdrIcon) {
+            const color = avatarColor(name);
+            hdrIcon.innerHTML = initials(name);
+            hdrIcon.style.background = color;
+            hdrIcon.style.color = '#fff';
+        }
+
+        // Deselect channels & Highlight DM
         renderChannels();
-        // Highlight selected DM
         renderRecentDms(userId);
 
-        const box = document.getElementById('chatMessages');
-        box.innerHTML = `<div class="state-center">
-            <div class="state-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
-            <p>Loading conversation…</p>
-        </div>`;
+        if (box) {
+            box.scrollTop = 0;
+            box.innerHTML = `<div class="state-center">
+                <div class="state-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                <p>Loading conversation with ${escHtml(name)}…</p>
+            </div>`;
+        }
 
         loadMessages();
         startPolling();
@@ -2307,6 +2611,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
             console.error('loadRecentDms error:', e);
         }
         renderRecentDms();
+        checkUnreadAlerts(recentDms, channels);
     }
 
     function renderRecentDms(activeDmUserId) {
@@ -2489,6 +2794,13 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
             const box = document.getElementById('chatMessages');
             const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
 
+            if (json.force_reset) {
+                lastMessageId = 0;
+                if (box) box.innerHTML = '';
+                loadMessages();
+                return;
+            }
+
             if (json.success && Array.isArray(json.data) && json.data.length > 0) {
                 // Remove loading/empty state on first load
                 const stateEl = box.querySelector('.state-center');
@@ -2543,8 +2855,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                         </button>
                         <div class="msg-action-menu" id="msg-menu-${msg.id}">
                             ${mine ? `<button class="msg-action-item" onclick="editMessage(${msg.id})"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
-                            ${mine ? `<button class="msg-action-item danger" onclick="deleteMessage(${msg.id})"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
-                            ${!mine ? `<button class="msg-action-item danger" onclick="deleteMessage(${msg.id})"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
+                            ${(mine || CURRENT_USER_ROLE === 'admin') ? `<button class="msg-action-item danger" onclick="deleteMessage(${msg.id})"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
                         </div>
                         <div class="msg-avatar" style="background:${color}">${ini}</div>
                         <div class="msg-body">
@@ -2557,10 +2868,11 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
                     // Notification & Read status logic
                     if (!mine && lastMessageId === msg.id) {
-                        if (document.visibilityState !== 'visible') {
-                            showPushNotification(name, msg.message);
+                        playNotificationSound();
+                        if (document.visibilityState !== 'visible' || !document.hasFocus()) {
+                            showSystemNotification(name, msg.message);
                         } else {
-                            // If tab is visible and we just got a new message on this channel
+                            // If tab is visible and focused, and we just got a new message on this channel
                             markAsRead();
                         }
                     }
@@ -2939,7 +3251,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                         <div class="mm-user-name">${escHtml(name)} ${isSelf ? '<span style="color:#10b981;font-size:0.7rem;">(you)</span>' : ''}</div>
                         <div class="mm-user-meta">${escHtml(u.role || 'member')} · @${escHtml(u.username || '')}</div>
                     </div>
-                    ${!isSelf && (currentChannel || '').toLowerCase() !== 'general' ? `<button class="mm-action-btn mm-remove-btn" data-uid="${u.id}" data-name="${escAttr(name)}" onclick="removeMember(${u.id}, this.dataset.name)">
+                    ${!isSelf && (currentChannel || '').toLowerCase() !== 'general' && CURRENT_USER_ROLE === 'admin' ? `<button class="mm-action-btn mm-remove-btn" data-uid="${u.id}" data-name="${escAttr(name)}" onclick="removeMember(${u.id}, this.dataset.name)">
                         <i class="fa-solid fa-user-minus" style="margin-right:4px;"></i> Remove
                     </button>` : ''}
                 </div>`;
@@ -2973,9 +3285,9 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                         <div class="mm-user-name">${escHtml(name)}</div>
                         <div class="mm-user-meta">${escHtml(u.role || 'member')} · @${escHtml(u.username || '')}</div>
                     </div>
-                    <button class="mm-action-btn mm-add-btn" data-uid="${u.id}" data-name="${escAttr(name)}" onclick="addMember(${u.id}, this.dataset.name)">
+                    ${CURRENT_USER_ROLE === 'admin' ? `<button class="mm-action-btn mm-add-btn" data-uid="${u.id}" data-name="${escAttr(name)}" onclick="addMember(${u.id}, this.dataset.name)">
                         <i class="fa-solid fa-user-plus" style="margin-right:4px;"></i> Add
-                    </button>
+                    </button>` : ''}
                 </div>`;
             }).join('');
         }
@@ -3139,11 +3451,23 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
         // Update delete button visibility
         const delBtn = document.getElementById('deleteChannelBtn');
+        const clearBtn = document.getElementById('clearAllBtn');
+
         if (delBtn) {
             delBtn.style.display = (isDmView || currentChannel.toLowerCase() === 'general') ? 'none' : '';
-            // Change label for DM
-            if (isDmView) {
-                delBtn.style.display = 'none';
+        }
+        if (clearBtn) {
+            const rawRole = (CURRENT_USER_ROLE || '').toLowerCase().trim();
+            const isAdmin = (rawRole === 'admin' || rawRole === 'administrator');
+            // Show for DMs (everyone) OR General (admins only)
+            const showClear = isDmView || (isAdmin && currentChannel === 'General');
+            clearBtn.style.display = showClear ? '' : 'none';
+
+            // Hide divider if both primary actions are hidden
+            const divider = document.querySelector('.channel-dropdown-divider');
+            if (divider) {
+                const showDel = (delBtn && delBtn.style.display !== 'none');
+                divider.style.display = (showDel || showClear) ? '' : 'none';
             }
         }
     }
@@ -3283,20 +3607,6 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
             console.log('Background push notifications enabled');
         } catch (e) {
             console.warn('Push subscription failed:', e);
-        }
-    }
-
-    function showPushNotification(title, message) {
-        if (!("Notification" in window)) return;
-        if (Notification.permission === "granted") {
-            const n = new Notification(title, {
-                body: message,
-                icon: '/favicon.ico'
-            });
-            n.onclick = () => {
-                window.focus();
-                n.close();
-            };
         }
     }
 

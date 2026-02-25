@@ -20,8 +20,21 @@ try {
         $teamId = $_GET['team_id'] ?? null;
 
         if ($action === 'channels') {
-            $stmt = $pdo->prepare("SELECT * FROM channels WHERE team_id = ? ORDER BY name ASC");
-            $stmt->execute([$teamId]);
+            $isAdmin = (strtolower(trim($user['role'])) === 'admin');
+
+            if ($teamId) {
+                $stmt = $pdo->prepare("SELECT * FROM channels WHERE team_id = ? ORDER BY name ASC");
+                $stmt->execute([$teamId]);
+            } else {
+                if ($isAdmin) {
+                    // Admins see all channels if no team context
+                    $stmt = $pdo->query("SELECT * FROM channels ORDER BY team_id ASC, name ASC");
+                } else {
+                    // Regular users see channels for their assigned team
+                    $stmt = $pdo->prepare("SELECT * FROM channels WHERE team_id = ? ORDER BY name ASC");
+                    $stmt->execute([$user['team_id']]);
+                }
+            }
             $channels = $stmt->fetchAll();
 
             // For each channel, get unread count
@@ -105,6 +118,8 @@ try {
         $lastId = $_GET['last_id'] ?? 0;
         $channel = $_GET['channel'] ?? 'General';
         $teamId = $_GET['team_id'] ?? null;
+        $isDm = (strpos($channel, 'dm-') === 0);
+        $isGlobal = ($channel === 'General');
 
         $sql = "
             SELECT m.*, u.username, u.full_name 
@@ -114,7 +129,8 @@ try {
         ";
         $params = [$channel, $lastId];
 
-        if ($teamId) {
+        // Only filter by team_id for regular team channels (not DMs or Global General)
+        if ($teamId && !$isDm && !$isGlobal) {
             $sql .= " AND m.team_id = ?";
             $params[] = $teamId;
         }
@@ -123,7 +139,24 @@ try {
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
+        $messages = $stmt->fetchAll();
+
+        // Check if messages were deleted/cleared (tail truncation)
+        $stmtMax = $pdo->prepare("SELECT MAX(id) FROM chat_messages WHERE channel = ?");
+        $stmtMax->execute([$channel]);
+        $maxDbId = (int) ($stmtMax->fetchColumn() ?: 0);
+
+        $forceReset = false;
+        if ($lastId > 0 && $maxDbId < $lastId) {
+            $forceReset = true;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'data' => $messages,
+            'force_reset' => $forceReset,
+            'max_id' => $maxDbId
+        ]);
         exit;
 
     } elseif ($method === 'POST') {
@@ -156,6 +189,11 @@ try {
             }
 
             if ($action === 'delete_channel') {
+                $rawRole = strtolower(trim($user['role'] ?? ''));
+                if ($rawRole !== 'admin' && $rawRole !== 'administrator') {
+                    echo json_encode(['success' => false, 'message' => 'Only admins can delete channels.']);
+                    exit;
+                }
                 $stmt = $pdo->prepare("DELETE FROM channels WHERE id = ? AND team_id = ?");
                 $stmt->execute([$data['channel_id'], $data['team_id']]);
                 echo json_encode(['success' => true]);
@@ -164,14 +202,22 @@ try {
 
             if ($action === 'clear_messages') {
                 $channel = $data['channel'] ?? '';
-                // Security: If DM, ensure current user is part of it
-                if (strpos($channel, 'dm-') === 0) {
-                    $parts = explode('-', $channel);
-                    if (count($parts) === 3) {
-                        if ($parts[1] != $userId && $parts[2] != $userId) {
-                            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-                            exit;
-                        }
+                $rawRole = strtolower(trim($user['role'] ?? ''));
+                $isAdmin = ($rawRole === 'admin' || $rawRole === 'administrator');
+
+                // Enforce: Only admins can clear General or DMs.
+                if ($channel === 'General') {
+                    if (!$isAdmin) {
+                        echo json_encode(['success' => false, 'message' => 'Only admins can clear the General channel.']);
+                        exit;
+                    }
+                } else if (strpos($channel, 'dm-') === 0) {
+                    // Everyone can clear their own DMs
+                } else {
+                    // Regular custom channels
+                    if (!$isAdmin) {
+                        echo json_encode(['success' => false, 'message' => 'Only admins can clear channels.']);
+                        exit;
                     }
                 }
 
@@ -190,12 +236,12 @@ try {
                     deleteFilesFromMessage($msg);
                 }
 
-                if (strpos($channel, 'dm-') === 0) {
+                if ($channel === 'General' || strpos($channel, 'dm-') === 0) {
                     $stmt = $pdo->prepare("DELETE FROM chat_messages WHERE channel = ?");
                     $stmt->execute([$channel]);
                 } else {
                     $stmt = $pdo->prepare("DELETE FROM chat_messages WHERE team_id = ? AND channel = ?");
-                    $stmt->execute([$data['team_id'], $channel]);
+                    $stmt->execute([$data['team_id'] ?? null, $channel]);
                 }
                 echo json_encode(['success' => true, 'deleted' => $stmt->rowCount()]);
                 exit;
@@ -232,17 +278,30 @@ try {
             }
 
             if ($action === 'delete_message') {
+                $rawRole = strtolower(trim($user['role'] ?? ''));
+                $isAdmin = ($rawRole === 'admin' || $rawRole === 'administrator');
+
                 // Fetch message content first to find any files
-                $fStmt = $pdo->prepare("SELECT message FROM chat_messages WHERE id = ? AND user_id = ?");
-                $fStmt->execute([$data['message_id'], $userId]);
+                if ($isAdmin) {
+                    $fStmt = $pdo->prepare("SELECT message FROM chat_messages WHERE id = ?");
+                    $fStmt->execute([$data['message_id']]);
+                } else {
+                    $fStmt = $pdo->prepare("SELECT message FROM chat_messages WHERE id = ? AND user_id = ?");
+                    $fStmt->execute([$data['message_id'], $userId]);
+                }
                 $msgContent = $fStmt->fetchColumn();
 
                 if ($msgContent) {
                     deleteFilesFromMessage($msgContent);
                 }
 
-                $stmt = $pdo->prepare("DELETE FROM chat_messages WHERE id = ? AND user_id = ?");
-                $stmt->execute([$data['message_id'], $userId]);
+                if ($isAdmin) {
+                    $stmt = $pdo->prepare("DELETE FROM chat_messages WHERE id = ?");
+                    $stmt->execute([$data['message_id']]);
+                } else {
+                    $stmt = $pdo->prepare("DELETE FROM chat_messages WHERE id = ? AND user_id = ?");
+                    $stmt->execute([$data['message_id'], $userId]);
+                }
                 echo json_encode(['success' => true]);
                 exit;
             }
@@ -252,13 +311,17 @@ try {
                 if (strpos($channel, 'dm-') === 0) {
                     $parts = explode('-', $channel);
                     if (count($parts) === 3) {
-                        if ($parts[1] == $userId) {
-                            $stmt = $pdo->prepare("UPDATE dm_threads SET deleted_by_user1 = 1 WHERE channel = ?");
-                        } else if ($parts[2] == $userId) {
-                            $stmt = $pdo->prepare("UPDATE dm_threads SET deleted_by_user2 = 1 WHERE channel = ?");
+                        $p1 = $parts[1];
+                        $p2 = $parts[2];
+
+                        if ($p1 == $userId) {
+                            $stmt1 = $pdo->prepare("UPDATE dm_threads SET deleted_by_user1 = 1 WHERE channel = ?");
+                            $stmt1->execute([$channel]);
                         }
-                        if (isset($stmt))
-                            $stmt->execute([$channel]);
+                        if ($p2 == $userId) {
+                            $stmt2 = $pdo->prepare("UPDATE dm_threads SET deleted_by_user2 = 1 WHERE channel = ?");
+                            $stmt2->execute([$channel]);
+                        }
                     }
                 }
                 echo json_encode(['success' => true]);
@@ -282,12 +345,18 @@ try {
 
         // Handle File Upload & Send Message (Multipart)
         $teamId = $_POST['team_id'] ?? null;
+        if ($teamId === 'null' || $teamId === 'undefined')
+            $teamId = null;
+
         $channel = $_POST['channel'] ?? 'General';
         $message = $_POST['message'] ?? '';
 
-        if (!$teamId) {
+        $isDm = (strpos($channel, 'dm-') === 0);
+        $isGlobal = ($channel === 'General');
+
+        if (!$teamId && !$isDm && !$isGlobal) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Team ID required']);
+            echo json_encode(['success' => false, 'message' => 'Team ID required for regular channels']);
             exit;
         }
 
@@ -339,30 +408,49 @@ try {
             exit;
         }
 
+        $isDm = (strpos($channel, 'dm-') === 0);
+        $isGlobal = ($channel === 'General');
+        $storeTeamId = ($isDm || $isGlobal) ? null : $teamId;
+
         $stmt = $pdo->prepare("INSERT INTO chat_messages (team_id, channel, user_id, message) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$teamId, $channel, $userId, $message]);
+        $stmt->execute([$storeTeamId, $channel, $userId, $message]);
         $newMsgId = $pdo->lastInsertId();
 
         // 🔔 Background Notification Trigger
-        require_once __DIR__ . '/../lib/NotificationService.php';
-        $senderName = $user['full_name'] ?: ($user['username'] ?: 'Someone');
+        try {
+            require_once __DIR__ . '/../lib/NotificationService.php';
+            $senderName = $user['full_name'] ?: ($user['username'] ?: 'Someone');
 
-        if (strpos($channel, 'dm-') === 0) {
-            // Direct Message push
-            $parts = explode('-', $channel);
-            $targetUserId = ($parts[1] == $userId) ? $parts[2] : $parts[1];
-            NotificationService::sendPushToUser($targetUserId, "New Message from $senderName", $message);
-        } else {
-            // Channel push (to all channel members except sender)
-            $stmtM = $pdo->prepare("
-                SELECT user_id FROM channel_members cm 
-                JOIN channels c ON cm.channel_id = c.id 
-                WHERE c.name = ? AND cm.user_id != ?
-            ");
-            $stmtM->execute([$channel, $userId]);
-            while ($row = $stmtM->fetch()) {
-                NotificationService::sendPushToUser($row['user_id'], "#$channel: $senderName", $message);
+            if ($isDm) {
+                // Direct Message push
+                $parts = explode('-', $channel);
+                $targetUserId = ($parts[1] == $userId) ? $parts[2] : $parts[1];
+                NotificationService::sendPushToUser($targetUserId, "New Message from $senderName", $message);
+            } else if ($isGlobal) {
+                // System-wide Global channel push (to ALL active users across ALL teams)
+                $stmtM = $pdo->prepare("
+                    SELECT id as user_id FROM users 
+                    WHERE id != ? AND is_active = 1
+                ");
+                $stmtM->execute([$userId]);
+                while ($row = $stmtM->fetch()) {
+                    NotificationService::sendPushToUser($row['user_id'], "$senderName (Global):", $message);
+                }
+            } else {
+                // Regular Channel push (to all channel members except sender)
+                $stmtM = $pdo->prepare("
+                    SELECT user_id FROM channel_members cm 
+                    JOIN channels c ON cm.channel_id = c.id 
+                    WHERE c.name = ? AND c.team_id = ? AND cm.user_id != ?
+                ");
+                $stmtM->execute([$channel, $teamId, $userId]);
+                while ($row = $stmtM->fetch()) {
+                    NotificationService::sendPushToUser($row['user_id'], "#$channel: $senderName", $message);
+                }
             }
+        } catch (Exception $pushNoteErr) {
+            // Log push errors for debugging
+            error_log("Chat Push Notification Error: " . $pushNoteErr->getMessage() . " in " . $pushNoteErr->getFile() . " on line " . $pushNoteErr->getLine());
         }
 
         // If DM, ensure thread is tracked and not marked as deleted
@@ -380,7 +468,7 @@ try {
             }
         }
 
-        echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+        echo json_encode(['success' => true, 'id' => (int) $newMsgId]);
         exit;
     }
 

@@ -8,7 +8,7 @@ $teamId = $_GET['team_id'] ?? null;
 $docId = $_GET['id'] ?? null;
 
 if (!$teamId) {
-    header("Location: /manage-teams.php");
+    header("Location: /manage_teams.php");
     exit;
 }
 
@@ -18,7 +18,7 @@ try {
     $team = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$team) {
-        header("Location: /manage-teams.php");
+        header("Location: /manage_teams.php");
         exit;
     }
 } catch (PDOException $e) {
@@ -43,7 +43,9 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
     <!-- Workspace Nav -->
     <div class="workspace-nav" style="position: relative;">
         <div class="nav-left">
-            <a href="/tools/word.php?team_id=<?php echo $teamId; ?>" class="btn-back" title="Back to Dashboard">
+            <?php $is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin'; ?>
+            <a href="<?php echo $is_admin ? '/admin_dashboard.php' : '/index.php'; ?>" class="btn-back"
+                title="Back to Dashboard">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
             <div class="doc-icon-header">

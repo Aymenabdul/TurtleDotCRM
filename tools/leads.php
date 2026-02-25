@@ -9,7 +9,7 @@ $user = AuthMiddleware::requireAuth();
 // Get Team ID
 $teamId = $_GET['team_id'] ?? null;
 if (!$teamId) {
-    header("Location: /manage-teams.php");
+    header("Location: /manage_teams.php");
     exit;
 }
 
@@ -20,7 +20,7 @@ try {
     $team = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$team) {
-        header("Location: /manage-teams.php");
+        header("Location: /manage_teams.php");
         exit;
     }
 
@@ -44,7 +44,8 @@ startLayout("Lead Tracker - " . $team['name'], $user);
     <div class="word-hero mb-4">
         <div class="flex-between align-end">
             <div>
-                <a href="javascript:history.back()" class="crumb-link mb-2">
+                <?php $is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin'; ?>
+                <a href="<?php echo $is_admin ? '/admin_dashboard.php' : '/index.php'; ?>" class="crumb-link mb-2">
                     <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
                 </a>
                 <h1 class="page-title">Lead Tracker</h1>

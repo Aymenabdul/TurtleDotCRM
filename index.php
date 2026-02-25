@@ -5,16 +5,17 @@ require_once __DIR__ . '/config.php';
 
 // Require authentication
 $user = AuthMiddleware::requireAuth();
+$is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin';
 
-if ($user['role'] === 'admin') {
+if ($is_admin) {
     header('Location: /admin_dashboard.php');
     exit;
 }
 
 // Set active page
-$GLOBALS['currentPage'] = 'index';
+$GLOBALS['currentPage'] = 'dashboard';
 
-startLayout('Home', $user);
+startLayout('Dashboard', $user);
 
 // Fetch team details for regular users
 $team = null;

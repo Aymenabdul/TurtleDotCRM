@@ -7,7 +7,7 @@ $user = AuthMiddleware::requireAuth();
 $teamId = $_GET['team_id'] ?? null;
 
 if (!$teamId) {
-    header("Location: /manage-teams.php");
+    header("Location: /manage_teams.php");
     exit;
 }
 
@@ -17,7 +17,7 @@ try {
     $team = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$team) {
-        header("Location: /manage-teams.php");
+        header("Location: /manage_teams.php");
         exit;
     }
 
@@ -1362,7 +1362,8 @@ startLayout("Calendar - " . $team['name'], $user);
     <!-- Hero -->
     <div class="cal-hero">
         <div class="cal-hero-left">
-            <a href="javascript:history.back()" class="cal-breadcrumb">
+            <?php $is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin'; ?>
+            <a href="<?php echo $is_admin ? '/admin_dashboard.php' : '/index.php'; ?>" class="cal-breadcrumb">
                 <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
             </a>
             <h1><i class="fa-solid fa-calendar-days" style="color:var(--primary);"></i> Team Calendar</h1>
@@ -2167,7 +2168,7 @@ startLayout("Calendar - " . $team['name'], $user);
                 const options = {
                     body: "Test notification from TurtleDot. OS alerts are active!",
                     icon: '/assets/images/turtle_logo_192.png',
-    badge: '/assets/images/turtle_logo_192.png',
+                    badge: '/assets/images/turtle_logo_192.png',
                     requireInteraction: true,
                     silent: false,
                     tag: 'test-ping'
@@ -2176,14 +2177,14 @@ startLayout("Calendar - " . $team['name'], $user);
                 // Try both methods
                 try {
                     new Notification("TurtleDot Alert 🐢", options);
-                } catch(e) {}
+                } catch (e) { }
 
                 if (navigator.serviceWorker) {
                     navigator.serviceWorker.ready.then(reg => {
                         reg.showNotification("TurtleDot Alert 🐢", options);
                     });
                 }
-                
+
                 Toast.success("Test Sent", "Check your notification center.");
             } else {
                 Toast.error("Blocked", "Notifications are disabled.");

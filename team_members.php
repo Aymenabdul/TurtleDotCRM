@@ -5,8 +5,9 @@ require_once __DIR__ . '/config.php';
 
 // Require authentication and ensure user is an admin
 $user = AuthMiddleware::requireAuth();
+$is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin';
 
-if ($user['role'] !== 'admin') {
+if (!$is_admin) {
     header('Location: /index.php');
     exit;
 }
