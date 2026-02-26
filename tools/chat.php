@@ -28,6 +28,11 @@ try {
     if (!$isEnabled) {
         die("This tool is not enabled for this team.");
     }
+
+    // Fetch user status from DB for persistence
+    $uStmt = $pdo->prepare("SELECT presence_status FROM users WHERE id = ?");
+    $uStmt->execute([$user['user_id']]);
+    $userStatus = $uStmt->fetchColumn() ?: 'online';
 } catch (PDOException $e) {
     die("Error: " . $e->getMessage());
 }
@@ -310,27 +315,35 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         color: #e2e8f0;
     }
 
+    /* Active Tint for online users */
+    .member-item.online-tint {
+        background: rgba(16, 185, 129, 0.03);
+    }
+
+    .member-item.online-tint .member-name-text {
+        color: #10b981;
+    }
+
     .member-delete-btn {
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
         width: 24px;
         height: 24px;
         border-radius: 4px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #ef4444;
+        color: #94a3b8;
         opacity: 0;
+        pointer-events: none;
         transition: all 0.2s;
         background: transparent;
         border: none;
         cursor: pointer;
+        margin-left: 4px;
     }
 
     .member-item:hover .member-delete-btn {
         opacity: 1;
+        pointer-events: auto;
     }
 
     .member-delete-btn:hover {
@@ -339,32 +352,58 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     }
 
     .member-avatar {
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.75rem;
-        font-weight: 700;
+        font-size: 0.8rem;
+        font-weight: 800;
         flex-shrink: 0;
         position: relative;
-        color: #fff;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1.5px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow:
+            0 10px 24px -10px rgba(255, 255, 255, 0.12),
+            0 4px 10px -2px rgba(255, 255, 255, 0.08),
+            inset 0 0 10px rgba(255, 255, 255, 0.05);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
     .member-avatar-dot {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: #475569;
-        border: 2px solid #1e2535;
+        width: 14px;
+        height: 14px;
         position: absolute;
-        bottom: -1px;
-        right: -1px;
+        bottom: -2px;
+        right: -2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        z-index: 5;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 
     .member-avatar-dot.online {
-        background: #22c55e;
+        color: #10b981;
+    }
+
+    .member-avatar-dot.away {
+        color: #f59e0b;
+    }
+
+    .member-avatar-dot.sleep {
+        color: #6366f1;
+    }
+
+    .member-avatar-dot.offline {
+        color: #94a3b8;
     }
 
     .member-info {
@@ -409,6 +448,143 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         margin-bottom: 0.35rem;
     }
 
+    /* ── Active Status Bar ── */
+    .active-status-bar {
+        display: flex;
+        gap: 16px;
+        overflow-x: auto;
+        padding: 8px 14px 22px;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        scroll-behavior: smooth;
+        /* Mask to show scrollability */
+        mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 15px, black calc(100% - 15px), transparent);
+    }
+
+    .active-status-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .status-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        flex-shrink: 0;
+        width: 64px;
+        padding: 4px 0;
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .status-item:hover {
+        transform: translateY(-4px);
+    }
+
+    .status-avatar-wrap {
+        position: relative;
+        width: 44px;
+        height: 44px;
+    }
+
+    .status-avatar-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.9rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1.5px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow:
+            0 12px 28px -8px rgba(255, 255, 255, 0.12),
+            0 4px 12px -2px rgba(255, 255, 255, 0.08),
+            inset 0 0 12px rgba(255, 255, 255, 0.05);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .status-item:hover .status-avatar-inner {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.1) translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .status-dot {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 14px;
+        height: 14px;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .status-dot.online {
+        color: #10b981;
+    }
+
+    .status-dot.away {
+        color: #f59e0b;
+    }
+
+    .status-dot.sleep {
+        color: #6366f1;
+    }
+
+    .status-dot.offline {
+        color: #94a3b8;
+    }
+
+    .status-name {
+        font-size: 0.62rem;
+        font-weight: 700;
+        color: #94a3b8;
+        width: 100%;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: all 0.3s ease;
+    }
+
+    .status-item:hover .status-name {
+        color: #f8fafc;
+    }
+
+    .status-item.active .status-avatar-inner {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: #10b981;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+    }
+
+    .status-item.active .status-name {
+        color: #10b981;
+        font-weight: 800;
+    }
+
+    .status-badge-inline {
+        font-size: 0.65rem;
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        font-weight: 700;
+        vertical-align: middle;
+    }
+
     /* Divider */
     .sidebar-divider {
         height: 1px;
@@ -421,7 +597,8 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         flex: 1;
         display: flex;
         flex-direction: column;
-        background: #ffffff;
+        background: #fdfdfd;
+        position: relative;
         min-width: 0;
         overflow: hidden;
     }
@@ -448,13 +625,20 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     .channel-icon-wrap {
         width: 38px;
         height: 38px;
-        border-radius: 10px;
-        background: #ecfdf5;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1.5px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         display: flex;
         align-items: center;
         justify-content: center;
         color: #10b981;
         font-size: 1rem;
+        box-shadow:
+            0 10px 24px -10px rgba(255, 255, 255, 0.12),
+            0 4px 10px -2px rgba(255, 255, 255, 0.08),
+            inset 0 0 10px rgba(255, 255, 255, 0.05);
     }
 
     .channel-title {
@@ -469,25 +653,152 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         margin-top: 1px;
     }
 
+    .presence-container {
+        position: relative;
+    }
+
     .live-badge {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
-        padding: 4px 10px;
-        background: #ecfdf5;
+        gap: 6px;
+        padding: 5px 12px;
+        background: rgba(16, 185, 129, 0.08);
         color: #059669;
         border-radius: 20px;
-        border: 1px solid #d1fae5;
+        border: 1px solid rgba(16, 185, 129, 0.2);
         font-size: 0.72rem;
         font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(8px);
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    .live-badge:hover {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: rgba(16, 185, 129, 0.3);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+    }
+
+    .live-badge:active {
+        transform: translateY(0);
     }
 
     .live-badge-dot {
-        width: 7px;
-        height: 7px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
+        background: currentColor;
+    }
+
+    .live-badge.online .live-badge-dot {
         background: #22c55e;
         animation: pulse 2s infinite;
+    }
+
+    .status-dropdown {
+        position: absolute;
+        top: calc(100% + 24px);
+        /* Pushed significantly lower to appear below the header */
+        right: 0;
+        background: rgba(255, 255, 255, 0.85);
+        /* Premium Frosted Glass */
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow:
+            0 12px 32px -4px rgba(0, 0, 0, 0.1),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+        z-index: 1100;
+        display: none;
+        flex-direction: row;
+        gap: 4px;
+        overflow: hidden;
+        animation: statusFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        padding: 4px;
+        white-space: nowrap;
+    }
+
+    .status-dropdown.show {
+        display: flex;
+    }
+
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        color: #475569;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s ease-in-out;
+        margin-bottom: 0;
+    }
+
+    .status-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .status-icon-box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        font-size: 0.8rem;
+    }
+
+    /* Individual brand-colored hover states */
+    .status-online:hover {
+        background: rgba(16, 185, 129, 0.12);
+        color: #059669;
+    }
+
+    .status-online .status-icon-box {
+        color: #10b981;
+    }
+
+    .status-away:hover {
+        background: rgba(245, 158, 11, 0.12);
+        color: #d97706;
+    }
+
+    .status-away .status-icon-box {
+        color: #f59e0b;
+    }
+
+    .status-sleep:hover {
+        background: rgba(99, 102, 241, 0.12);
+        color: #4338ca;
+    }
+
+    .status-sleep .status-icon-box {
+        color: #6366f1;
+    }
+
+    .status-offline:hover {
+        background: rgba(148, 163, 184, 0.15);
+        color: #475569;
+    }
+
+    .status-offline .status-icon-box {
+        color: #94a3b8;
+    }
+
+    @keyframes statusFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.98);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
     }
 
     @keyframes pulse {
@@ -506,11 +817,11 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     .chat-messages {
         flex: 1;
         overflow-y: auto;
-        padding: 1.5rem;
+        padding: 1.5rem 1.5rem 100px;
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-        background: #fafafa;
+        background: transparent;
     }
 
     .chat-messages::-webkit-scrollbar {
@@ -534,17 +845,24 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     }
 
     .msg-avatar {
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 800;
         flex-shrink: 0;
         align-self: flex-end;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1.5px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow:
+            0 10px 24px -10px rgba(255, 255, 255, 0.12),
+            0 4px 10px -2px rgba(255, 255, 255, 0.08),
+            inset 0 0 10px rgba(255, 255, 255, 0.05);
     }
 
     .msg-body {
@@ -974,37 +1292,58 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
     /* Input */
     .chat-input-wrap {
-        padding: 1rem 1.5rem 1.25rem;
-        background: #ffffff;
-        border-top: 1px solid #e5e7eb;
+        padding: 0 1.5rem 1.5rem;
+        background: transparent;
+        border-top: none;
         flex-shrink: 0;
+        z-index: 10;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
     }
 
     .chat-input-form {
         display: flex;
         align-items: center;
-        gap: 8px;
-        background: #f8fafc;
-        border: 1.5px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 8px 8px 8px 14px;
-        transition: 0.2s;
+        gap: 12px;
+        background: linear-gradient(110deg, rgba(255, 255, 255, 0.22) 0%, rgba(16, 185, 129, 0.06) 100%);
+        backdrop-filter: blur(45px) saturate(210%) brightness(1.04);
+        -webkit-backdrop-filter: blur(45px) saturate(210%) brightness(1.04);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        border-top: 1.8px solid rgba(16, 185, 129, 0.4);
+        border-left: 1.4px solid rgba(16, 185, 129, 0.4);
+        border-radius: 20px;
+        padding: 6px 8px 6px 22px;
+        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+
+        box-shadow:
+            0 35px 80px -20px rgba(0, 0, 0, 0.22),
+            0 15px 30px -10px rgba(16, 185, 129, 0.15),
+            inset 0 1px 3px rgba(255, 255, 255, 0.6),
+            inset 0 0 15px rgba(255, 255, 255, 0.12),
+            0 8px 15px -3px rgba(16, 185, 129, 0.08);
+        transform: translateY(-2px);
     }
 
     .chat-input-form:focus-within {
-        border-color: #10b981;
-        background: #fff;
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+        background: linear-gradient(110deg, rgba(255, 255, 255, 0.28) 0%, rgba(16, 185, 129, 0.08) 100%);
+        border-color: rgba(16, 185, 129, 0.4);
+        box-shadow:
+            0 45px 100px -20px rgba(0, 0, 0, 0.25),
+            inset 0 1px 4px rgba(255, 255, 255, 0.7);
+        transform: translateY(-5px) scale(1.002);
     }
 
     .chat-input-form input {
         flex: 1;
         border: none;
         background: transparent;
-        font-size: 0.92rem;
-        color: #1f2937;
+        font-size: 0.95rem;
+        color: #334155;
         outline: none;
-        padding: 6px 0;
+        padding: 10px 0;
+        font-weight: 500;
     }
 
     .chat-input-form input::placeholder {
@@ -1013,15 +1352,15 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
     .btn-attach,
     .btn-emoji {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
         border: none;
         background: transparent;
         cursor: pointer;
-        color: #9ca3af;
-        font-size: 1rem;
-        transition: 0.15s;
+        color: #64748b;
+        font-size: 1.1rem;
+        transition: all 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1029,29 +1368,34 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
     .btn-attach:hover,
     .btn-emoji:hover {
-        background: #e5e7eb;
-        color: #374151;
+        background: rgba(16, 185, 129, 0.08);
+        color: #10b981;
+        transform: translateY(-1px);
     }
 
     .btn-send {
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
         border: none;
         background: linear-gradient(135deg, #10b981, #059669);
         color: #fff;
-        font-size: 0.95rem;
+        font-size: 1rem;
         cursor: pointer;
-        transition: 0.2s;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
     }
 
     .btn-send:hover {
-        transform: scale(1.07);
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45);
+        transform: scale(1.08) rotate(-5deg);
+        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+    }
+
+    .btn-send:active {
+        transform: scale(0.95);
     }
 
     .btn-send:disabled {
@@ -1799,158 +2143,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         margin-top: 8px;
     }
 
-    /* ── Pulse Premium Notification Toast ── */
-    #pulseNotificationStack {
-        position: fixed;
-        top: 24px;
-        right: 24px;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        pointer-events: none;
-    }
 
-    .pulse-toast {
-        width: 380px;
-        max-width: calc(100vw - 48px);
-        background: rgba(255, 255, 255, 0.75);
-        backdrop-filter: blur(24px) saturate(200%);
-        -webkit-backdrop-filter: blur(24px) saturate(200%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 24px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1),
-            0 2px 8px rgba(0, 0, 0, 0.05),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-        padding: 18px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        pointer-events: auto;
-        cursor: pointer;
-        animation: toast-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        position: relative;
-    }
-
-    .pulse-toast:hover {
-        transform: translateY(-6px) scale(1.02);
-        background: rgba(255, 255, 255, 0.85);
-        box-shadow: 0 40px 100px rgba(0, 0, 0, 0.15);
-        border-color: rgba(16, 185, 129, 0.4);
-    }
-
-    .pulse-toast::before {
-        content: '';
-        position: absolute;
-        width: 4px;
-        height: 40px;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        background: linear-gradient(to bottom, #10b981, #3b82f6);
-        border-radius: 0 4px 4px 0;
-    }
-
-    .pulse-toast-avatar {
-        width: 52px;
-        height: 52px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 800;
-        font-size: 1.2rem;
-        flex-shrink: 0;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-        background: linear-gradient(135deg, #10b981, #059669);
-        border: 2px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .pulse-toast-content {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .pulse-toast-title {
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: #1a1c1e;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 2px;
-    }
-
-    .pulse-toast-time {
-        font-size: 0.72rem;
-        color: #8e9196;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .pulse-toast-body {
-        font-size: 0.9rem;
-        color: #44474e;
-        line-height: 1.5;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-weight: 400;
-    }
-
-    .pulse-toast-close {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        background: rgba(0, 0, 0, 0.04);
-        border: none;
-        color: #666;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-        cursor: pointer;
-        opacity: 0;
-        transition: all 0.2s;
-    }
-
-    .pulse-toast:hover .pulse-toast-close {
-        opacity: 1;
-    }
-
-    .pulse-toast-close:hover {
-        background: rgba(0, 0, 0, 0.1);
-        color: #1a1c1e;
-        transform: rotate(90deg);
-    }
-
-    @keyframes toast-in {
-        from {
-            opacity: 0;
-            transform: translateX(40px) scale(0.95) skewY(1deg);
-            filter: blur(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateX(0) scale(1) skewY(0deg);
-            filter: blur(0);
-        }
-    }
-
-    @keyframes toast-out {
-        to {
-            opacity: 0;
-            transform: scale(0.9) translateY(-20px);
-            filter: blur(15px);
-        }
-    }
 
     .pulse-toast.hiding {
         animation: toast-out 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -2007,9 +2200,14 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
         <div class="sidebar-divider" id="sidebarDivider"></div>
 
+        <!-- Active Status Bar -->
+        <div id="activeStatusBar" class="active-status-bar">
+            <!-- filled by JS -->
+        </div>
+
         <!-- Direct Messages / Members -->
-        <div class="sidebar-section-header" style="padding-top:0.5rem;" id="dmSectionHeader">
-            <span>Direct Messages</span>
+        <div class="sidebar-section-header" style="padding-top:0.5rem; margin-top: 4px;" id="dmSectionHeader">
+            <span>Recent Chats</span>
         </div>
         <div class="members-section">
             <div id="memberList">
@@ -2057,9 +2255,44 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                         <span class="call-tooltip">Share Screen</span>
                     </button>
                 </div>
-                <div class="live-badge">
-                    <div class="live-badge-dot"></div>
-                    Live
+                <div class="presence-container">
+                    <?php
+                    $statusClass = $userStatus;
+                    $statusLabel = ucfirst($userStatus);
+                    $iconHtml = '<i class="fa-solid fa-circle" style="animation: pulse 2s infinite;"></i>';
+                    if ($userStatus === 'away')
+                        $iconHtml = '<i class="fa-solid fa-clock"></i>';
+                    if ($userStatus === 'sleep')
+                        $iconHtml = '<i class="fa-solid fa-moon"></i>';
+                    if ($userStatus === 'offline')
+                        $iconHtml = '<i class="fa-regular fa-circle"></i>';
+                    ?>
+                    <div class="live-badge <?php echo $statusClass; ?>" id="userStatusBadge"
+                        onclick="toggleStatusMenu(event)">
+                        <div id="userStatusIconWrap" style="display:flex; align-items:center; justify-content:center;">
+                            <?php echo $iconHtml; ?>
+                        </div>
+                        <span id="userStatusLabel"><?php echo $statusLabel; ?></span>
+                    </div>
+
+                    <div class="status-dropdown" id="statusDropdown">
+                        <div class="status-item status-online" onclick="setUserStatus('online')">
+                            <span class="status-icon-box"><i class="fa-solid fa-circle"></i></span>
+                            Online
+                        </div>
+                        <div class="status-item status-away" onclick="setUserStatus('away')">
+                            <span class="status-icon-box"><i class="fa-solid fa-clock"></i></span>
+                            Away
+                        </div>
+                        <div class="status-item status-sleep" onclick="setUserStatus('sleep')">
+                            <span class="status-icon-box"><i class="fa-solid fa-moon"></i></span>
+                            Sleep
+                        </div>
+                        <div class="status-item status-offline" onclick="setUserStatus('offline')">
+                            <span class="status-icon-box"><i class="fa-regular fa-circle"></i></span>
+                            Offline
+                        </div>
+                    </div>
                 </div>
                 <?php if ($user['role'] === 'admin'): ?>
                     <button class="btn-channel-settings" id="btnChannelSettings" onclick="openMembersModal()"
@@ -2134,7 +2367,6 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
 
 <!-- ============ PULSE NOTIFICATIONS ============ -->
-<div id="pulseNotificationStack"></div>
 
 <!-- ============ CUSTOM CONFIRM POPUP ============ -->
 <div class="confirm-overlay" id="confirmOverlay">
@@ -2270,6 +2502,25 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     let mmCurrentTab = 'current';
     let isSearching = false;
     let openMenuMsgId = null;
+    let isChatFirstCheck = true;
+
+    function syncActiveChannelWithSW() {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            let activeChan = currentChannel;
+            if (isDmView && activeDmPartnerId) {
+                // Construct DM channel string consistently with backend
+                activeChan = (CURRENT_USER < activeDmPartnerId)
+                    ? `dm-${CURRENT_USER}-${activeDmPartnerId}`
+                    : `dm-${activeDmPartnerId}-${CURRENT_USER}`;
+            }
+            navigator.serviceWorker.controller.postMessage({
+                type: 'SET_ACTIVE_CHANNEL',
+                channel: activeChan
+            });
+        }
+    }
+    let chatLastUnreadState = {};
+    let activeDmPartnerId = null;
 
 
     /* ── Notification Helpers ── */
@@ -2281,103 +2532,56 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         }
     }
 
-    function showSystemNotification(title, message) {
-        // 1. Show custom in-app Pulse toast (always show if in app)
-        showPulseToast(title, message);
-
-        // 2. Show native browser notification (only if out of focus/hidden)
-        if (document.visibilityState !== 'visible' || !document.hasFocus()) {
-            if ("Notification" in window && Notification.permission === "granted") {
-                const n = new Notification(title, {
-                    body: message,
-                    icon: '/assets/images/turtle_logo_192.png'
-                });
-                n.onclick = () => {
-                    window.focus();
-                    n.close();
-                };
-            }
-        }
-    }
-
-    function showPulseToast(title, body) {
-        const stack = document.getElementById('pulseNotificationStack');
-        if (!stack) return;
-
-        const toast = document.createElement('div');
-        toast.className = 'pulse-toast';
-
-        const color = avatarColor(title);
-        const ini = initials(title);
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        toast.innerHTML = `
-            <div class="pulse-toast-avatar" style="background:${color}">${ini}</div>
-            <div class="pulse-toast-content">
-                <div class="pulse-toast-title">
-                    <span>${escHtml(title)}</span>
-                    <span class="pulse-toast-time">${time}</span>
-                </div>
-                <div class="pulse-toast-body">${escHtml(body)}</div>
-            </div>
-            <button class="pulse-toast-close" onclick="this.parentElement.remove()">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        `;
-
-        toast.onclick = (e) => {
-            if (e.target.closest('.pulse-toast-close')) return;
-            window.focus();
-            // Optional: try to find the user in recentDms to switch?
-            // For now, just bring window to front
-            toast.classList.add('hiding');
-            setTimeout(() => toast.remove(), 400);
-        };
-
-        // Auto-remove after 6 seconds
-        const timer = setTimeout(() => {
-            toast.classList.add('hiding');
-            setTimeout(() => toast.remove(), 400);
-        }, 6000);
-
-        stack.appendChild(toast);
-
-        // Max 3 toasts at once
-        while (stack.children.length > 3) {
-            stack.firstChild.remove();
-        }
-    }
-
-    let lastUnreadState = {};
-
     function checkUnreadAlerts(dms, chans) {
         let hasNew = false;
-        const newState = {};
+        const shouldNotify = !isChatFirstCheck;
 
         if (Array.isArray(dms)) {
             dms.forEach(d => {
-                const key = `dm-${d.user_id}`;
-                newState[key] = d.unread_count || 0;
-                if (newState[key] > (lastUnreadState[key] || 0)) {
-                    showSystemNotification(d.full_name || d.username, 'Sent you a message');
+                const p = d.partner;
+                if (!p) return;
+
+                const key = `dm-${p.id}`;
+                const unreadCount = d.unread_count || 0;
+
+                const isCurrentDm = isDmView && p.id == activeDmPartnerId;
+                // If it's the active chat (Active Tint), NEVER show an alert here.
+                if (isCurrentDm) {
+                    chatLastUnreadState[key] = document.hasFocus() ? 0 : unreadCount;
+                    return;
+                }
+
+                if (shouldNotify && unreadCount > (chatLastUnreadState[key] || 0)) {
+                    showSystemNotification(p.full_name || p.username || 'Message', 'Sent you a message');
                     hasNew = true;
                 }
+                chatLastUnreadState[key] = unreadCount;
             });
         }
 
         if (Array.isArray(chans)) {
             chans.forEach(c => {
                 const key = `chan-${c.name}`;
-                newState[key] = c.unread_count || 0;
-                if (newState[key] > (lastUnreadState[key] || 0) && c.name !== currentChannel) {
+                const unreadCount = c.unread_count || 0;
+
+                const isCurrentChan = !isDmView && c.name === currentChannel;
+
+                // If it's the active chat (Active Tint), NEVER show an alert here.
+                if (isCurrentChan) {
+                    chatLastUnreadState[key] = document.hasFocus() ? 0 : unreadCount;
+                    return;
+                }
+
+                if (shouldNotify && unreadCount > (chatLastUnreadState[key] || 0)) {
                     showSystemNotification(`#${c.name}`, 'New activity in channel');
                     hasNew = true;
                 }
+                chatLastUnreadState[key] = unreadCount;
             });
         }
 
         if (hasNew) playNotificationSound();
-        lastUnreadState = newState;
+        isChatFirstCheck = false;
     }
 
     /* ── Custom confirm popup helper ── */
@@ -2435,6 +2639,14 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         return (name || '?').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     }
 
+    function getPresenceIconHTML(status) {
+        const s = (status || 'online').toLowerCase();
+        if (s === 'online') return `<i class="fa-solid fa-circle" style="animation: pulse 2s infinite;"></i>`;
+        if (s === 'away') return `<i class="fa-solid fa-clock"></i>`;
+        if (s === 'sleep') return `<i class="fa-solid fa-moon"></i>`;
+        return `<i class="fa-regular fa-circle"></i>`; // offline
+    }
+
     /* ══════════════ CHANNELS ══════════════ */
     async function loadChannels() {
         try {
@@ -2465,7 +2677,13 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         if (!el) return;
         el.innerHTML = channels.map(c => {
             const active = (!isDmView && c.name === currentChannel) ? 'active' : '';
-            const unread = (c.unread_count > 0) ? `<span class="unread-badge">${c.unread_count}</span>` : '';
+            // CRITICAL: Force unread count to 0 if this is the active channel and window is focused
+            let displayUnreadCount = c.unread_count || 0;
+            if (active && document.hasFocus()) {
+                displayUnreadCount = 0;
+            }
+
+            const unread = (displayUnreadCount > 0) ? `<span class="unread-badge">${displayUnreadCount}</span>` : '';
             return `<div class="sidebar-item ${active}" onclick="switchChannel('${escAttr(c.name)}', ${c.id || 'null'})">
                         <span class="item-icon"><i class="fa-solid fa-hashtag"></i></span>
                         <span class="item-label">${escHtml(c.name)}</span>
@@ -2481,6 +2699,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         isDmView = false;
         lastMessageId = 0;
         loadEpoch++;
+        activeDmPartnerId = null;
 
         // Stop polling during switch
         if (pollTimer) clearInterval(pollTimer);
@@ -2488,7 +2707,8 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         document.getElementById('headerChannelName').textContent = name;
         document.getElementById('headerSubtitle').textContent = 'Team channel';
         document.getElementById('headerIcon').innerHTML = '<i class="fa-solid fa-hashtag"></i>';
-        document.getElementById('headerIcon').style.background = '#ecfdf5';
+        document.getElementById('headerIcon').style.background = 'rgba(255, 255, 255, 0.03)';
+        document.getElementById('headerIcon').style.borderColor = 'rgba(16, 185, 129, 0.4)';
         document.getElementById('headerIcon').style.color = '#10b981';
         document.getElementById('messageInput').placeholder = `Message #${name}…`;
 
@@ -2507,6 +2727,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         if (delBtn) delBtn.style.display = (name.toLowerCase() === 'general' || CURRENT_USER_ROLE !== 'admin') ? 'none' : '';
 
         renderChannels();
+        syncActiveChannelWithSW();
 
         const box = document.getElementById('chatMessages');
         box.innerHTML = `<div class="state-center">
@@ -2536,6 +2757,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         currentChannelId = null;
         lastMessageId = 0;
         loadEpoch++;
+        activeDmPartnerId = userId;
 
         if (pollTimer) clearInterval(pollTimer);
 
@@ -2551,21 +2773,26 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         const btnSet = document.getElementById('btnChannelSettings');
         const box = document.getElementById('chatMessages');
 
+        const partner = allMembers.find(m => m.id == userId);
+        const presence = partner ? (partner.presence_status || 'online') : 'online';
+
         if (hdrName) hdrName.textContent = name;
-        if (hdrSub) hdrSub.textContent = 'Direct Message';
+        if (partner) updateHeaderStatus(partner);
         if (msgInp) msgInp.placeholder = `Message ${name}…`;
         if (btnSet) btnSet.style.display = 'none';
 
         if (hdrIcon) {
             const color = avatarColor(name);
             hdrIcon.innerHTML = initials(name);
-            hdrIcon.style.background = color;
-            hdrIcon.style.color = '#fff';
+            hdrIcon.style.background = 'rgba(255, 255, 255, 0.03)';
+            hdrIcon.style.borderColor = color + '66';
+            hdrIcon.style.color = color;
         }
 
         // Deselect channels & Highlight DM
         renderChannels();
         renderRecentDms(userId);
+        syncActiveChannelWithSW();
 
         if (box) {
             box.scrollTop = 0;
@@ -2594,11 +2821,51 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
             const json = await res.json();
             if (json.success && Array.isArray(json.users)) {
                 allMembers = json.users;
+                // Force UI updates when members (and their presence) change
+                renderRecentDms();
+                renderActiveStatusBar();
+                updateMessageAvatars();
+                if (isDmView && activeDmPartnerId) {
+                    const partner = allMembers.find(m => m.id == activeDmPartnerId);
+                    if (partner) updateHeaderStatus(partner);
+                }
             }
         } catch (e) {
             console.error('loadMembers error:', e);
         }
     }
+
+    function updateMessageAvatars() {
+        const bubbles = document.querySelectorAll('.msg-group[data-uid]');
+        bubbles.forEach(b => {
+            const uid = b.dataset.uid;
+            const sender = allMembers.find(m => m.id == uid);
+            if (sender) {
+                const presence = sender.presence_status || 'online';
+                const dot = b.querySelector('.member-avatar-dot');
+                if (dot && !dot.classList.contains(presence)) {
+                    dot.className = `member-avatar-dot ${presence}`;
+                    dot.innerHTML = getPresenceIconHTML(presence);
+                }
+            }
+        });
+    }
+
+    function updateHeaderStatus(partner) {
+        const hdrSub = document.getElementById('headerSubtitle');
+        if (!hdrSub) return;
+        const presence = partner.presence_status || 'online';
+        let statusText = 'Direct Message';
+        let statusColor = '#94a3b8';
+        if (presence === 'online') { statusText = 'Active now'; statusColor = '#10b981'; }
+        else if (presence === 'away') { statusText = 'Away'; statusColor = '#f59e0b'; }
+        else if (presence === 'sleep') { statusText = 'Sleeping'; statusColor = '#6366f1'; }
+        else if (presence === 'offline') { statusText = 'Offline'; statusColor = '#94a3b8'; }
+
+        let iconHtml = getPresenceIconHTML(presence);
+        hdrSub.innerHTML = `<span style="color:${statusColor}; font-weight:600;"><span style="font-size:8px; margin-right:4px; display:inline-flex; align-items:center;">${iconHtml}</span> ${statusText}</span>`;
+    }
+
 
     async function loadRecentDms() {
         try {
@@ -2610,11 +2877,11 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         } catch (e) {
             console.error('loadRecentDms error:', e);
         }
-        renderRecentDms();
+        renderRecentDms(activeDmPartnerId);
         checkUnreadAlerts(recentDms, channels);
     }
 
-    function renderRecentDms(activeDmUserId) {
+    function renderRecentDms(activeDmUserId = activeDmPartnerId) {
         const el = document.getElementById('memberList');
         if (!el) return;
 
@@ -2631,8 +2898,20 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
             const name = p.full_name || p.username || 'Unknown';
             const ini = initials(name);
             const color = avatarColor(name);
-            const online = p.is_active == 1;
+
+            // Sync status with allMembers for consistency
+            const latestInfo = allMembers.find(m => m.id == p.id);
+            const presence = latestInfo ? (latestInfo.presence_status || 'online') : (p.presence_status || 'online');
+
             const isActive = activeDmUserId && p.id == activeDmUserId;
+            // For the tint we consider anything except offline as "online"
+            const showPresenceTint = (presence !== 'offline');
+
+            // CRITICAL: If this is the active chat and the window is focused, force unread count to 0 in UI
+            let displayUnreadCount = dm.unread_count || 0;
+            if (isActive && document.hasFocus() && isDmView) {
+                displayUnreadCount = 0;
+            }
 
             // Truncate last message
             let preview = dm.last_message || '';
@@ -2662,24 +2941,68 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                 preview = 'You: ' + preview;
             }
 
-            const unread = (dm.unread_count > 0) ? `<span class="unread-badge" style="margin-left:auto;">${dm.unread_count}</span>` : '';
+            const unread = (displayUnreadCount > 0) ? `<span class="unread-badge">${displayUnreadCount}</span>` : '';
 
-            return `<div class="member-item${isActive ? ' active' : ''}" onclick="switchToDM(${p.id}, '${escAttr(name)}')" style="cursor:pointer;${isActive ? 'background:rgba(16,185,129,0.15);color:#34d399;' : ''}">
-                <div class="member-avatar" style="background:${color}">
+            return `<div class="member-item${isActive ? ' active' : ''}${showPresenceTint ? ' online-tint' : ''}" onclick="switchToDM(${p.id}, '${escAttr(name)}')" style="cursor:pointer;${isActive ? 'background:rgba(16,185,129,0.18);color:#34d399;' : ''}">
+                <div class="member-avatar" style="border-color:${color}66; color:${color}; position:relative; overflow:visible;">
                     ${ini}
-                    <div class="member-avatar-dot ${online ? 'online' : ''}"></div>
+                    <div class="member-avatar-dot ${presence}">
+                        ${getPresenceIconHTML(presence)}
+                    </div>
                 </div>
                 <div class="member-info" style="flex:1; min-width:0;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div class="member-name-text">${escHtml(name)}</div>
-                        ${unread}
+                        <div style="display:flex; align-items:center;">
+                            ${unread}
+                            ${(displayUnreadCount === 0) ? `
+                            <button class="member-delete-btn" onclick="event.stopPropagation(); deleteRecentChat(${p.id}, '${escAttr(name)}')" title="Delete Chat">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                            ` : ''}
+                        </div>
                     </div>
-                    <div class="member-last-msg">${escHtml(preview)} ${statusIcon}</div>
+                    <div class="member-last-msg" style="${displayUnreadCount > 0 ? 'font-weight:600; color:white;' : ''}">${escHtml(preview)} ${statusIcon}</div>
                 </div>
-                <button class="member-delete-btn" onclick="event.stopPropagation(); deleteRecentChat(${p.id}, '${escAttr(name)}')" title="Delete Chat">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
             </div>`;
+        }).join('');
+
+        renderActiveStatusBar();
+    }
+
+    function renderActiveStatusBar() {
+        const el = document.getElementById('activeStatusBar');
+        if (!el) return;
+
+        // Filter actively online members, excluding current user
+        const onlineMembers = allMembers.filter(m => (m.presence_status || 'online') !== 'offline' && m.id != CURRENT_USER);
+
+        if (onlineMembers.length === 0) {
+            el.innerHTML = '';
+            el.style.display = 'none';
+            return;
+        }
+
+        el.style.display = 'flex';
+        el.innerHTML = onlineMembers.map(m => {
+            const name = m.full_name || m.username || 'Unknown';
+            const firstName = name.split(' ')[0];
+            const ini = initials(name);
+            const color = avatarColor(name);
+            const isActive = isDmView && activeDmPartnerId == m.id;
+            const presence = m.presence_status || 'online';
+
+            return `
+                <div class="status-item ${isActive ? 'active' : ''}" onclick="switchToDM(${m.id}, '${escAttr(name)}')" title="${escAttr(name)} is ${presence}">
+                    <div class="status-avatar-wrap">
+                        <div class="status-avatar-inner" style="border-color:${color}55; color:${color}">${ini}</div>
+                        <div class="status-dot ${presence}">
+                            ${getPresenceIconHTML(presence)}
+                        </div>
+                    </div>
+                    <div class="status-name">${escHtml(firstName)}</div>
+                </div>
+            `;
         }).join('');
     }
 
@@ -2726,14 +3049,16 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
             const name = u.full_name || u.username || 'Unknown';
             const ini = initials(name);
             const color = avatarColor(name);
-            const online = u.is_active == 1;
+            const presence = u.presence_status || 'online';
             const uname = u.username || '';
             const role = u.role || 'member';
 
             return `<div class="member-item" onclick="switchToDM(${u.id}, '${escAttr(name)}')" style="cursor:pointer;">
-                <div class="member-avatar" style="background:${color}">
+                <div class="member-avatar" style="border-color:${color}66; color:${color}">
                     ${ini}
-                    <div class="member-avatar-dot ${online ? 'online' : ''}"></div>
+                    <div class="member-avatar-dot ${presence}">
+                        ${getPresenceIconHTML(presence)}
+                    </div>
                 </div>
                 <div class="member-info">
                     <div class="member-name-text">${escHtml(name)}</div>
@@ -2802,6 +3127,7 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
             }
 
             if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+                const oldLastId = lastMessageId;
                 // Remove loading/empty state on first load
                 const stateEl = box.querySelector('.state-center');
                 if (stateEl) stateEl.remove();
@@ -2849,6 +3175,11 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                     g.dataset.msgId = msg.id;
                     g.dataset.mine = mine ? '1' : '0';
                     g.dataset.text = msg.message; // Keep raw
+                    g.dataset.uid = msg.user_id;
+
+                    const sender = allMembers.find(m => m.id == msg.user_id);
+                    const presence = sender ? (sender.presence_status || 'online') : (msg.presence_status || 'online');
+
                     g.innerHTML = `
                         <button class="msg-actions-btn" onclick="toggleMsgMenu(event, ${msg.id})" title="Actions">
                             <i class="fa-solid fa-ellipsis-vertical"></i>
@@ -2857,7 +3188,12 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                             ${mine ? `<button class="msg-action-item" onclick="editMessage(${msg.id})"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
                             ${(mine || CURRENT_USER_ROLE === 'admin') ? `<button class="msg-action-item danger" onclick="deleteMessage(${msg.id})"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
                         </div>
-                        <div class="msg-avatar" style="background:${color}">${ini}</div>
+                        <div class="msg-avatar" style="border-color:${color}66; color:${color}; position:relative; overflow:visible;">
+                            ${ini}
+                            <div class="member-avatar-dot ${presence}">
+                                ${getPresenceIconHTML(presence)}
+                            </div>
+                        </div>
                         <div class="msg-body">
                             ${!mine ? `<div class="msg-sender">${escHtml(name)}</div>` : ''}
                             <div class="msg-bubble" id="msg-bubble-${msg.id}">${bodyHtml}</div>
@@ -2866,17 +3202,19 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                     box.appendChild(g);
                     lastMessageId = Math.max(lastMessageId, parseInt(msg.id));
 
-                    // Notification & Read status logic
-                    if (!mine && lastMessageId === msg.id) {
-                        playNotificationSound();
-                        if (document.visibilityState !== 'visible' || !document.hasFocus()) {
-                            showSystemNotification(name, msg.message);
-                        } else {
-                            // If tab is visible and focused, and we just got a new message on this channel
-                            markAsRead();
-                        }
-                    }
                 });
+
+                // Notification & Read status logic:
+                // Only notify if we already had a known lastMessageId and user is NOT looking at the chat
+                const latest = json.data[json.data.length - 1];
+                if (oldLastId > 0 && latest && latest.user_id != CURRENT_USER && parseInt(latest.id) > oldLastId) {
+                    const isFocused = document.hasFocus();
+                    if (!isFocused) {
+                        // We used to notify here, but user requested NO notification for "active tint" chats.
+                        // So we stay silent but keep the unread count in sync.
+                    }
+                    markAsRead();
+                }
 
                 if (atBottom || lastMessageId === parseInt(json.data[json.data.length - 1].id)) {
                     box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
@@ -3352,13 +3690,18 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         document.querySelectorAll('.msg-action-menu.show').forEach(m => m.classList.remove('show'));
         const dd = document.getElementById('channelDropdown');
         if (dd) dd.classList.remove('show');
+
+        const sdd = document.getElementById('statusDropdown');
+        if (sdd) sdd.classList.remove('show');
+
         openMenuMsgId = null;
     }
 
     // Close menus on any click outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.msg-actions-btn') && !e.target.closest('.msg-action-menu') &&
-            !e.target.closest('#btnChannelMenu') && !e.target.closest('.channel-dropdown')) {
+            !e.target.closest('#btnChannelMenu') && !e.target.closest('.channel-dropdown') &&
+            !e.target.closest('#userStatusBadge') && !e.target.closest('.status-dropdown')) {
             closeAllMenus();
         }
     });
@@ -3443,6 +3786,35 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
     }
 
     /* ══════════════ CHANNEL MENU ══════════════ */
+    function toggleStatusMenu(e) {
+        e.stopPropagation();
+        const dd = document.getElementById('statusDropdown');
+        const isShow = dd.classList.contains('show');
+        closeAllMenus();
+        if (!isShow) dd.classList.add('show');
+    }
+
+    function setUserStatus(status) {
+        const badge = document.getElementById('userStatusBadge');
+        const label = document.getElementById('userStatusLabel');
+        const iconWrap = document.getElementById('userStatusIconWrap');
+
+        badge.className = 'live-badge ' + status;
+
+        let labelText = status.charAt(0).toUpperCase() + status.slice(1);
+        let iconHtml = getPresenceIconHTML(status);
+
+        iconWrap.innerHTML = iconHtml;
+        label.textContent = labelText;
+        closeAllMenus();
+        // Persist to DB
+        fetch('/api/chat.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_status', status: status })
+        }).catch(err => console.error('Failed to update status:', err));
+    }
+
     function toggleChannelMenu(e) {
         e.stopPropagation();
         closeAllMenus();
@@ -3562,6 +3934,21 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
 
     /* ══════════════ READ STATUS & NOTIFICATIONS ══════════════ */
     async function markAsRead() {
+        if (!currentChannel) return;
+
+        // Optimistically clear local counts to avoid race conditions with poller
+        if (isDmView && activeDmPartnerId) {
+            const dm = recentDms.find(d => d.partner.id == activeDmPartnerId);
+            if (dm) dm.unread_count = 0;
+            chatLastUnreadState[`dm-${activeDmPartnerId}`] = 0;
+        } else {
+            const ch = channels.find(c => c.name === currentChannel);
+            if (ch) ch.unread_count = 0;
+            chatLastUnreadState[`chan-${currentChannel}`] = 0;
+        }
+        renderRecentDms();
+        renderChannels();
+
         try {
             await fetch('/api/chat.php', {
                 method: 'POST',
@@ -3572,41 +3959,8 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                     channel_id: currentChannelId
                 })
             });
-            // Update sidebar unread counts
-            loadChannels();
-            loadRecentDms();
         } catch (e) {
             console.error('markAsRead error:', e);
-        }
-    }
-
-    async function subscribeToPush() {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-
-        try {
-            const registration = await navigator.serviceWorker.ready;
-
-            // Check if already subscribed
-            const existingSub = await registration.pushManager.getSubscription();
-            if (existingSub) return;
-
-            // Public VAPID Key (Match with config.php)
-            const publicVapidKey = 'BOT34D3Wld3Hw7tnAThhk6XfrY3t-PZ1hMMr6BJJNC6oA0Yx9s6bw4NGF1J9AOvohWXt5y-BSOWXtK9LUftWj7E';
-            const convertedKey = urlBase64ToUint8Array(publicVapidKey);
-
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: convertedKey
-            });
-
-            await fetch('/api/push_subscription.php', {
-                method: 'POST',
-                body: JSON.stringify({ subscription }),
-                headers: { 'Content-Type': 'application/json' }
-            });
-            console.log('Background push notifications enabled');
-        } catch (e) {
-            console.warn('Push subscription failed:', e);
         }
     }
 
@@ -3616,23 +3970,20 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(() => {
             loadMessages();
-            pollCounter++;
-            // Refresh sidebar list every 2 polls (~7 seconds)
-            if (pollCounter % 2 === 0) loadRecentDms();
-        }, 3500);
+            loadRecentDms();
+            loadChannels();
+            syncActiveChannelWithSW(); // Keep SW updated periodically
+
+            // Refresh member status/presence every poll (~3 seconds) to ensure real-time updates
+            loadMembers();
+        }, 3000);
     }
 
     /* ══════════════ BOOT ══════════════ */
     document.addEventListener('DOMContentLoaded', async () => {
-        // Request notification permission
-        if ("Notification" in window && Notification.permission !== "denied") {
-            Notification.requestPermission();
-        }
-
         await loadMembers();
         await loadRecentDms();
         await loadChannels();
-        await subscribeToPush();
 
         const saved = localStorage.getItem('chat_active_view');
         let restored = false;
@@ -3666,6 +4017,11 @@ startLayout("Chat — " . htmlspecialchars($team['name']), $user, false);
                 switchChannel('General', null);
             }
         }
+
+        // Auto-mark as read when window regains focus
+        window.addEventListener('focus', () => {
+            if (currentChannel) markAsRead();
+        });
     });
 </script>
 

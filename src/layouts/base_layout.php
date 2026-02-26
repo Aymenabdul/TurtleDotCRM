@@ -120,6 +120,150 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                 --sidebar-collapsed-width: 80px;
             }
 
+            /* ── Global Pulse Notification Toasts ── */
+            #pulseNotificationStack {
+                position: fixed;
+                top: 24px;
+                right: 24px;
+                z-index: 99999;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                pointer-events: none;
+            }
+
+            .pulse-toast {
+                width: 310px;
+                max-width: calc(100vw - 32px);
+                background: rgba(255, 255, 255, 0.75);
+                backdrop-filter: blur(24px) saturate(200%);
+                -webkit-backdrop-filter: blur(24px) saturate(200%);
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                border-radius: 20px;
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+                padding: 12px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                pointer-events: auto;
+                cursor: pointer;
+                animation: toast-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                position: relative;
+            }
+
+            .pulse-toast:hover {
+                transform: translateY(-4px) scale(1.02);
+                background: rgba(255, 255, 255, 0.85);
+                box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+                border-color: rgba(16, 185, 129, 0.4);
+            }
+
+            .pulse-toast::before {
+                content: '';
+                position: absolute;
+                width: 3px;
+                height: 24px;
+                left: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                background: linear-gradient(to bottom, #10b981, #3b82f6);
+                border-radius: 0 3px 3px 0;
+            }
+
+            .pulse-toast-avatar {
+                width: 40px;
+                height: 40px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: 800;
+                font-size: 1rem;
+                flex-shrink: 0;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                background: linear-gradient(135deg, #10b981, #059669);
+                border: 1.5px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .pulse-toast-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .pulse-toast-title {
+                font-size: 0.85rem;
+                font-weight: 700;
+                color: #1a1c1e;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 1px;
+            }
+
+            .pulse-toast-time {
+                font-size: 0.65rem;
+                color: #8e9196;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+
+            .pulse-toast-body {
+                font-size: 0.85rem;
+                color: #44474e;
+                line-height: 1.4;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-weight: 400;
+            }
+
+            .pulse-toast-close {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: rgba(0, 0, 0, 0.04);
+                border: none;
+                color: #666;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.7rem;
+                cursor: pointer;
+                opacity: 0;
+                transition: all 0.2s;
+            }
+
+            .pulse-toast:hover .pulse-toast-close {
+                opacity: 1;
+            }
+
+            @keyframes toast-in {
+                from {
+                    opacity: 0;
+                    transform: translateX(40px) scale(0.95);
+                    filter: blur(10px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateX(0) scale(1);
+                    filter: blur(0);
+                }
+            }
+
+            @keyframes toast-out {
+                to {
+                    opacity: 0;
+                    transform: scale(0.9) translateY(-20px);
+                }
+            }
+
             /* ===== Global Reset ===== */
             * {
                 margin: 0;
@@ -1176,8 +1320,142 @@ function endLayout()
             </main>
         </div>
 
+        <!-- Global Notifications Container -->
+        <div id="pulseNotificationStack"></div>
+
         <script>
-            // Global logout function
+            /* ══════════════════════════════════════════════════════════
+               🔔 GLOBAL PULSE NOTIFICATION SYSTEM
+               Allows notifications to work on every page of the app.
+               ══════════════════════════════════════════════════════════ */
+
+            let lastUnreadState = {};
+            const isChatPage = window.location.pathname.includes('chat.php');
+
+            function showSystemNotification(title, message) {
+                // OS-level notifications are handled in real-time by the Service Worker (sw.js).
+                // The poller here strictly handles the in-app Pulse UI.
+                showPulseToast(title, message);
+            }
+
+            function showPulseToast(title, body) {
+                const stack = document.getElementById('pulseNotificationStack');
+                if (!stack || !title) return;
+
+                const toast = document.createElement('div');
+                toast.className = 'pulse-toast';
+
+                const initials = title.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+                toast.innerHTML = `
+                    <div class="pulse-toast-avatar">${initials}</div>
+                    <div class="pulse-toast-content">
+                        <div class="pulse-toast-title">
+                            <span>${title}</span>
+                            <span class="pulse-toast-time">${time}</span>
+                        </div>
+                        <div class="pulse-toast-body">${body}</div>
+                    </div>
+                    <button class="pulse-toast-close" onclick="event.stopPropagation(); this.closest('.pulse-toast').remove();"><i class="fa-solid fa-xmark"></i></button>
+                `;
+
+                toast.onclick = () => {
+                    window.location.href = '/tools/chat.php';
+                };
+
+                stack.prepend(toast);
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.style.animation = 'toast-out 0.4s forwards';
+                        setTimeout(() => toast.remove(), 400);
+                    }
+                }, 8000);
+            }
+
+            let isFirstCheck = true;
+
+            async function checkGlobalUnreads() {
+                try {
+                    const res = await fetch('/api/global_status.php');
+                    const json = await res.json();
+                    if (!json.success) return;
+
+                    let totalUnread = 0;
+                    let shouldNotify = !isFirstCheck;
+
+                    // Handle DMs
+                    json.unread_dms.forEach(d => {
+                        const key = `dm-${d.user_id}`;
+                        totalUnread += (d.unread_count || 0);
+                        // Only show toast if NOT on the chat page (chat.php handles its own toasts)
+                        if (!isChatPage && shouldNotify && (d.unread_count || 0) > (lastUnreadState[key] || 0)) {
+                            showSystemNotification(d.full_name || d.username, 'Sent you a message');
+                        }
+                        lastUnreadState[key] = (d.unread_count || 0);
+                    });
+
+                    // Handle Channels
+                    json.unread_channels.forEach(c => {
+                        const key = `chan-${c.name}`;
+                        totalUnread += (c.unread_count || 0);
+                        // Only show toast if NOT on the chat page
+                        if (!isChatPage && shouldNotify && (c.unread_count || 0) > (lastUnreadState[key] || 0)) {
+                            showSystemNotification(`#${c.name}`, 'New activity');
+                        }
+                        lastUnreadState[key] = (c.unread_count || 0);
+                    });
+
+                    // Update Sidebar Badge
+                    const badge = document.getElementById('global-chat-badge');
+                    if (badge) {
+                        if (totalUnread > 0) {
+                            badge.textContent = totalUnread;
+                            badge.style.display = 'inline-block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+
+                    isFirstCheck = false;
+                } catch (e) {
+                    console.error('Check unreads failed', e);
+                }
+            }
+
+            async function syncPushSubscription() {
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    let sub = await reg.pushManager.getSubscription();
+                    if (!sub) {
+                        const key = 'BOT34D3Wld3Hw7tnAThhk6XfrY3t-PZ1hMMr6BJJNC6oA0Yx9s6bw4NGF1J9AOvohWXt5y-BSOWXtK9LUftWj7E';
+                        sub = await reg.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: (() => {
+                                const padding = '='.repeat((4 - key.length % 4) % 4);
+                                const base64 = (key + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                                const raw = window.atob(base64);
+                                return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+                            })()
+                        });
+                    }
+                    await fetch('/api/push_subscription.php', {
+                        method: 'POST',
+                        body: JSON.stringify({ subscription: sub }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch (e) { console.warn('Global push sync failed'); }
+            }
+
+            // Start global background processes
+            setInterval(checkGlobalUnreads, 5000);
+            syncPushSubscription();
+
+            // Handle browser notification permissions globally
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
             async function logout() {
                 try {
                     await fetch('/api/logout.php');

@@ -7,7 +7,7 @@ $user = AuthMiddleware::requireAuthAPI();
 
 try {
     // Select only necessary fields for security
-    $stmt = $pdo->query("SELECT id, username, email, full_name, role, team_id, is_active FROM users ORDER BY full_name ASC, username ASC");
+    $stmt = $pdo->query("SELECT id, username, email, full_name, role, team_id, is_active, presence_status FROM users ORDER BY full_name ASC, username ASC");
     $users = $stmt->fetchAll();
 
     echo json_encode([

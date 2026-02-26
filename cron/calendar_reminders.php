@@ -17,7 +17,7 @@ try {
     // 2. Any meeting that started in the last 10 minutes (Catch-up reminder)
     // This handles cases where the cron missed the exact 2-min mark.
     $stmt = $pdo->prepare("
-        SELECT id, team_id, title, start_time 
+        SELECT id, team_id, created_by, title, start_time 
         FROM calendar_events 
         WHERE reminded = 0 
         AND start_time <= (NOW() + INTERVAL 3 MINUTE)
@@ -32,9 +32,17 @@ try {
     }
 
     foreach ($upcomingEvents as $event) {
-        // Get all members of the team associated with the event
-        $userStmt = $pdo->prepare("SELECT id FROM users WHERE team_id = ?");
-        $userStmt->execute([$event['team_id']]);
+        // Collect all target user IDs for this notification:
+        // 1. All members of the designated team
+        // 2. The creator of the event (especially if they aren't in the team)
+        // 3. All System Administrators (who oversee everything)
+        $userStmt = $pdo->prepare("
+            SELECT DISTINCT id FROM users 
+            WHERE team_id = ? 
+            OR id = ? 
+            OR role IN ('admin', 'administrator', 'superadmin')
+        ");
+        $userStmt->execute([$event['team_id'], $event['created_by']]);
         $userIds = $userStmt->fetchAll(PDO::FETCH_COLUMN);
 
         $readableTime = date('h:i A', strtotime($event['start_time']));
@@ -42,9 +50,11 @@ try {
         foreach ($userIds as $userId) {
             NotificationService::sendPushToUser(
                 $userId,
-                "Meeting Reminder",
-                "\"{$event['title']}\" starts at {$readableTime}. (In 2 minutes)",
-                "/tools/calendar.php?team_id={$event['team_id']}"
+                "🗓️ Meeting Starting Soon",
+                "\"{$event['title']}\" begins at {$readableTime}. Click to join.",
+                "/tools/calendar.php?team_id={$event['team_id']}",
+                "calendar-alert-{$event['id']}", // Unique tag per meeting
+                ['type' => 'calendar', 'event_id' => $event['id']]
             );
         }
 

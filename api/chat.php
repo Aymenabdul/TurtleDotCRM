@@ -68,7 +68,7 @@ try {
                 $chan = $thread['channel'];
                 $otherId = ($thread['user1_id'] == $userId) ? $thread['user2_id'] : $thread['user1_id'];
 
-                $uStmt = $pdo->prepare("SELECT id, username, full_name, role, is_active FROM users WHERE id = ?");
+                $uStmt = $pdo->prepare("SELECT id, username, full_name, role, is_active, presence_status FROM users WHERE id = ?");
                 $uStmt->execute([$otherId]);
                 $otherUser = $uStmt->fetch();
 
@@ -99,11 +99,11 @@ try {
         if ($action === 'channel_members') {
             $channelId = $_GET['channel_id'] ?? null;
             if (!$channelId || $channelId === 'null') {
-                $stmt = $pdo->prepare("SELECT id, username, full_name, role FROM users WHERE team_id = ? AND is_active = 1");
+                $stmt = $pdo->prepare("SELECT id, username, full_name, role, presence_status FROM users WHERE team_id = ? AND is_active = 1");
                 $stmt->execute([$teamId]);
             } else {
                 $stmt = $pdo->prepare("
-                    SELECT u.id, u.username, u.full_name, u.role 
+                    SELECT u.id, u.username, u.full_name, u.role, u.presence_status 
                     FROM users u
                     JOIN channel_members cm ON u.id = cm.user_id
                     WHERE cm.channel_id = ? AND u.is_active = 1
@@ -122,7 +122,7 @@ try {
         $isGlobal = ($channel === 'General');
 
         $sql = "
-            SELECT m.*, u.username, u.full_name 
+            SELECT m.*, u.username, u.full_name, u.presence_status 
             FROM chat_messages m
             JOIN users u ON m.user_id = u.id
             WHERE m.channel = ? AND m.id > ?
@@ -247,6 +247,14 @@ try {
                 exit;
             }
 
+            if ($action === 'update_status') {
+                $status = $data['status'] ?? 'online';
+                $stmt = $pdo->prepare("UPDATE users SET presence_status = ? WHERE id = ?");
+                $stmt->execute([$status, $userId]);
+                echo json_encode(['success' => true]);
+                exit;
+            }
+
             if ($action === 'mark_as_read') {
                 $channel = $data['channel'] ?? '';
                 if (strpos($channel, 'dm-') === 0) {
@@ -254,6 +262,20 @@ try {
                     $stmt->execute([$channel, $userId]);
                 } else {
                     $channelId = $data['channel_id'] ?? 0;
+                    if (!$channelId && $channel) {
+                        // Resolve ID by name if missing
+                        $cStmt = $pdo->prepare("SELECT id FROM channels WHERE name = ? LIMIT 1");
+                        $cStmt->execute([$channel]);
+                        $channelId = $cStmt->fetchColumn();
+
+                        // Auto-create General if it somehow doesn't exist
+                        if (!$channelId && $channel === 'General') {
+                            $pdo->prepare("INSERT IGNORE INTO channels (name, team_id) VALUES ('General', 0)")->execute();
+                            $cStmt->execute([$channel]);
+                            $channelId = $cStmt->fetchColumn();
+                        }
+                    }
+
                     if ($channelId) {
                         // Get max message id
                         $mStmt = $pdo->prepare("SELECT MAX(id) FROM chat_messages WHERE channel = ?");
@@ -262,7 +284,7 @@ try {
 
                         if ($maxId) {
                             $stmt = $pdo->prepare("INSERT INTO channel_members_last_read (user_id, channel_id, last_read_message_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE last_read_message_id = ?");
-                            $stmt->execute([$userId, $channelId, $maxId, $maxId]);
+                            $stmt->execute([$userId, (int) $channelId, $maxId, $maxId]);
                         }
                     }
                 }
@@ -425,19 +447,49 @@ try {
                 // Direct Message push
                 $parts = explode('-', $channel);
                 $targetUserId = ($parts[1] == $userId) ? $parts[2] : $parts[1];
-                NotificationService::sendPushToUser($targetUserId, "New Message from $senderName", $message);
+                $tag = "chat-dm-" . min($userId, $targetUserId) . "-" . max($userId, $targetUserId);
+
+                // Get real unread count for the target user in this DM
+                $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM chat_messages WHERE channel = ? AND user_id != ? AND is_read = 0");
+                $cntStmt->execute([$channel, $targetUserId]);
+                $unreadCount = (int) $cntStmt->fetchColumn();
+
+                NotificationService::sendPushToUser($targetUserId, "New Message from $senderName", $message, "/tools/chat.php?team_id=$teamId", $tag, [
+                    'channel' => $channel,
+                    'unread_count' => $unreadCount,
+                    'type' => 'chat'
+                ]);
             } else if ($isGlobal) {
-                // System-wide Global channel push (to ALL active users across ALL teams)
-                $stmtM = $pdo->prepare("
-                    SELECT id as user_id FROM users 
-                    WHERE id != ? AND is_active = 1
-                ");
+                // System-wide Global channel push
+                $tag = "chat-chan-General";
+                $stmtM = $pdo->prepare("SELECT id as user_id FROM users WHERE id != ? AND is_active = 1");
                 $stmtM->execute([$userId]);
                 while ($row = $stmtM->fetch()) {
-                    NotificationService::sendPushToUser($row['user_id'], "$senderName (Global):", $message);
+                    $uId = $row['user_id'];
+                    // Get unread count for General (checking the last_read record)
+                    $lrStmt = $pdo->prepare("SELECT last_read_message_id FROM channel_members_last_read WHERE user_id = ? AND channel_id = (SELECT id FROM channels WHERE name='General' LIMIT 1)");
+                    $lrStmt->execute([$uId]);
+                    $lastReadId = $lrStmt->fetchColumn() ?: 0;
+
+                    $cStmt = $pdo->prepare("SELECT COUNT(*) FROM chat_messages WHERE channel = 'General' AND id > ? AND user_id != ?");
+                    $cStmt->execute([$lastReadId, $uId]);
+                    $unreadCount = (int) $cStmt->fetchColumn();
+
+                    NotificationService::sendPushToUser($uId, "$senderName (Global)", $message, "/tools/chat.php?team_id=$teamId", $tag, [
+                        'channel' => 'General',
+                        'unread_count' => $unreadCount,
+                        'type' => 'chat'
+                    ]);
                 }
             } else {
-                // Regular Channel push (to all channel members except sender)
+                // Regular Channel push
+                $tag = "chat-chan-$channel";
+                // Get channel_id
+                $stmtC = $pdo->prepare("SELECT id FROM channels WHERE name = ? AND team_id = ?");
+                $stmtC->execute([$channel, $teamId]);
+                $chanInfo = $stmtC->fetch();
+                $chanId = $chanInfo ? $chanInfo['id'] : 0;
+
                 $stmtM = $pdo->prepare("
                     SELECT user_id FROM channel_members cm 
                     JOIN channels c ON cm.channel_id = c.id 
@@ -445,7 +497,22 @@ try {
                 ");
                 $stmtM->execute([$channel, $teamId, $userId]);
                 while ($row = $stmtM->fetch()) {
-                    NotificationService::sendPushToUser($row['user_id'], "#$channel: $senderName", $message);
+                    $uId = $row['user_id'];
+                    // Get unread count for THIS channel for THIS user
+                    $lrStmt = $pdo->prepare("SELECT last_read_message_id FROM channel_members_last_read WHERE user_id = ? AND channel_id = ?");
+                    $lrStmt->execute([$uId, $chanId]);
+                    $lastReadId = $lrStmt->fetchColumn() ?: 0;
+
+                    $cStmt = $pdo->prepare("SELECT COUNT(*) FROM chat_messages WHERE channel = ? AND id > ? AND user_id != ?");
+                    $cStmt->execute([$channel, $lastReadId, $uId]);
+                    $unreadCount = (int) $cStmt->fetchColumn();
+
+                    NotificationService::sendPushToUser($uId, "#$channel: $senderName", $message, "/tools/chat.php?team_id=$teamId", $tag, [
+                        'channel' => $channel,
+                        'channel_id' => $chanId,
+                        'unread_count' => $unreadCount,
+                        'type' => 'chat'
+                    ]);
                 }
             }
         } catch (Exception $pushNoteErr) {

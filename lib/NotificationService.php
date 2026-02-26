@@ -5,7 +5,7 @@ use Minishlink\WebPush\Subscription;
 
 class NotificationService
 {
-    public static function sendPushToUser($userId, $title, $body, $url = '/tools/chat.php')
+    public static function sendPushToUser($userId, $title, $body, $url = '/tools/chat.php', $tag = 'pulse-default', $extra = [])
     {
         global $pdo;
 
@@ -26,11 +26,19 @@ class NotificationService
         ];
 
         $webPush = new WebPush($auth);
-        $payload = json_encode([
+
+        $payloadData = [
             'title' => $title,
             'body' => $body,
-            'url' => $url
-        ]);
+            'url' => $url,
+            'tag' => $tag
+        ];
+
+        if (!empty($extra)) {
+            $payloadData = array_merge($payloadData, $extra);
+        }
+
+        $payload = json_encode($payloadData);
 
         foreach ($subscriptions as $subJson) {
             $subData = json_decode($subJson, true);

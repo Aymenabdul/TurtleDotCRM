@@ -56,11 +56,16 @@ $contextTeamId = $user['team_id'] ?? null;
                             $toolUrl = $toolData['url'] . '?team_id=' . $team['id'];
                             $isActive = (strpos($_SERVER['REQUEST_URI'], $toolData['url']) !== false);
                             ?>
-                            <a href="<?php echo $toolUrl; ?>" class="nav-item <?php echo $isActive ? 'active' : ''; ?>">
-                                <i class="fa-solid <?php echo $toolData['icon']; ?>"></i>
-                                <span class="nav-item-text">
-                                    <?php echo $toolData['name']; ?>
-                                </span>
+                            <a href="<?php echo $toolUrl; ?>"
+                               class="nav-item <?php echo $isActive ? 'active' : ''; ?>"
+                               <?php echo ($key === 'tool_chat') ? 'id="sidebar-pulse-chat"' : ''; ?>>
+                                 <i class="fa-solid <?php echo $toolData['icon']; ?>"></i>
+                                 <span class="nav-item-text" style="flex:1;">
+                                     <?php echo $toolData['name']; ?>
+                                 </span>
+                                 <?php if ($key === 'tool_chat'): ?>
+                                     <span class="unread-badge" id="global-chat-badge" style="display:none; margin-left:auto;"></span>
+                                 <?php endif; ?>
                             </a>
                             <?php
                         endif;
