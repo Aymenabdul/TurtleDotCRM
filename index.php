@@ -16,7 +16,9 @@ if ($is_admin) {
 $GLOBALS['currentPage'] = 'dashboard';
 
 startLayout('Dashboard', $user);
-
+?>
+<link rel="stylesheet" href="/css/user/dashboard.css">
+<?php
 // Fetch team details for regular users
 $team = null;
 if ($user['team_id']) {
@@ -30,13 +32,12 @@ if ($user['team_id']) {
 ?>
 
 <div class="fade-in">
-    <div class="card mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);">
-        <div class="card-header" style="border-bottom: none; margin-bottom: 0;">
-            <h1 class="card-title"
-                style="font-size: 2.5rem; font-weight: 800; color: #1e293b; letter-spacing: -0.04em;">
+    <div class="card mb-4 user-welcome-card">
+        <div class="card-header">
+            <h1 class="card-title">
                 Welcome back, <?php echo htmlspecialchars($user['full_name'] ?? $user['username']); ?>!
             </h1>
-            <p class="card-subtitle" style="font-size: 1.1rem; color: #64748b;">
+            <p class="card-subtitle">
                 <?php echo $team ? "You are operating as part of <strong>" . htmlspecialchars($team['name']) . "</strong>." : "Your account is active. Contact your admin to be assigned to a tactical unit."; ?>
             </p>
         </div>
@@ -57,21 +58,18 @@ if ($user['team_id']) {
 
             foreach ($tools as $key => $tool):
                 if (isset($team[$key]) && $team[$key] == 1): ?>
-                    <a href="<?php echo $tool['url']; ?>?team_id=<?php echo $team['id']; ?>" class="card"
-                        style="text-decoration: none; transition: all 0.3s ease; border: 1px solid #e2e8f0;">
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div
-                                style="width: 50px; height: 50px; background: #ecfdf5; color: #10b981; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                    <a href="<?php echo $tool['url']; ?>?team_id=<?php echo $team['id']; ?>" class="card tool-card">
+                        <div class="tool-card-content">
+                            <div class="tool-icon-wrapper">
                                 <i class="fa-solid <?php echo $tool['icon']; ?>"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem;">
+                                <h3 class="tool-title">
                                     <?php echo $tool['name']; ?>
                                 </h3>
-                                <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;"><?php echo $tool['desc']; ?></p>
+                                <p class="tool-desc"><?php echo $tool['desc']; ?></p>
                             </div>
-                            <div
-                                style="margin-top: auto; display: flex; align-items: center; gap: 0.5rem; color: #10b981; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                            <div class="tool-launch-btn">
                                 Launch Tool <i class="fa-solid fa-arrow-right"></i>
                             </div>
                         </div>
@@ -80,12 +78,12 @@ if ($user['team_id']) {
             endforeach; ?>
         </div>
     <?php else: ?>
-        <div class="card" style="text-align: center; padding: 4rem 2rem; border: 2px dashed #e2e8f0;">
-            <div style="font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem;">
+        <div class="card no-unit-assigned">
+            <div>
                 <i class="fa-solid fa-user-slash"></i>
             </div>
-            <h2 style="color: #475569; font-weight: 700;">No Unit Assigned</h2>
-            <p style="color: #94a3b8; max-width: 400px; margin: 0 auto;">You haven't been assigned to a tactical unit yet.
+            <h2>No Unit Assigned</h2>
+            <p>You haven't been assigned to a tactical unit yet.
                 Please contact your system administrator for access to tools.</p>
         </div>
     <?php endif; ?>

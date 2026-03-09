@@ -32,7 +32,8 @@ try {
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
     <title>Spreadsheet - <?php echo htmlspecialchars($team['name']); ?></title>
 
     <!-- Fonts & Icons -->
@@ -41,872 +42,7 @@ try {
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <style>
-        /* Base Reset & Variables */
-        :root {
-            --excel-green: #107c41;
-            --excel-dark-green: #0c5e31;
-            --excel-ribbon-bg: #f3f2f1;
-            --excel-border: #e1dfdd;
-            --grid-line: #e0e0e0;
-            --header-bg: #f9f9f9;
-            --header-text: #666;
-            --selection-border: #107c41;
-            --selection-bg: rgba(16, 124, 65, 0.1);
-            --text-main: #323130;
-            --hover-bg: #eaeaea;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            font-family: 'Segoe UI', 'Inter', sans-serif;
-            background: white;
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Top Bar: Premium Green Title Area */
-        .excel-title-bar {
-            background: var(--excel-green);
-            height: 54px;
-            /* Taller for better touch targets */
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 18px;
-            color: white;
-            flex-shrink: 0;
-            z-index: 50;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .title-left {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .back-btn {
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            transition: all 0.2s;
-            cursor: pointer;
-            text-decoration: none;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .back-btn:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: translateY(-1px);
-        }
-
-        .app-icon {
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            background: white;
-            color: var(--excel-green);
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-        }
-
-        .file-info {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 2px;
-        }
-
-        .file-name-input {
-            background: transparent;
-            border: 1px solid transparent;
-            color: white;
-            font-size: 1.05rem;
-            font-weight: 600;
-            padding: 2px 6px;
-            margin-left: -6px;
-            border-radius: 4px;
-            outline: none;
-            width: 300px;
-            transition: 0.2s;
-            line-height: 1.2;
-        }
-
-        .file-name-input:focus,
-        .file-name-input:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .save-indicator {
-            font-size: 0.75rem;
-            opacity: 0.9;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-weight: 400;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .title-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-
-
-        .user-profile {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: white;
-            color: var(--excel-green);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            font-weight: 700;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Ribbon Toolbar Refined */
-        .ribbon-container {
-            background: #f8fafc;
-            border-bottom: 1px solid var(--excel-border);
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            padding: 6px 12px;
-        }
-
-        .ribbon-toolbar {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            height: 48px;
-            padding: 0 4px;
-        }
-
-        .tool-group {
-            display: flex;
-            gap: 6px;
-            padding-right: 12px;
-            border-right: 1px solid #e2e8f0;
-            align-items: center;
-            height: 32px;
-        }
-
-        .tool-group:last-child {
-            border-right: none;
-        }
-
-        .tool-btn {
-            border: 1px solid transparent;
-            background: white;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #475569;
-            transition: all 0.2s;
-            position: relative;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
-        }
-
-        .tool-btn:hover {
-            background: #f1f5f9;
-            border-color: #cbd5e1;
-            color: var(--text-main);
-            transform: translateY(-1px);
-        }
-
-        .tool-btn.active {
-            background: #dcfce7;
-            border-color: var(--excel-green);
-            color: var(--excel-dark-green);
-        }
-
-        .btn-small {
-            width: 32px;
-            height: 32px;
-            font-size: 0.95rem;
-        }
-
-
-        .btn-wide {
-            padding: 0 12px;
-            width: auto;
-            gap: 8px;
-            font-size: 0.85rem;
-            background: #f1f5f9;
-            border-color: #cbd5e1;
-            color: #475569;
-            font-weight: 600;
-            height: 32px;
-        }
-
-        .btn-wide:hover {
-            background: white;
-            border-color: var(--excel-green);
-            color: var(--excel-green);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .font-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .select-wrapper select {
-            border: 1px solid transparent;
-            background: transparent;
-            font-size: 0.85rem;
-            padding: 2px 4px;
-            border-radius: 3px;
-            outline: none;
-        }
-
-        .select-wrapper select:hover {
-            border-color: #d0d0d0;
-            background: white;
-        }
-
-        /* Formula Bar */
-        .formula-bar-container {
-            display: flex;
-            align-items: center;
-            padding: 6px 12px;
-            background: white;
-            border-bottom: 1px solid var(--excel-border);
-            gap: 10px;
-            height: 36px;
-            flex-shrink: 0;
-        }
-
-        .name-box {
-            width: 70px;
-            height: 24px;
-            border: 1px solid #d0d0d0;
-            display: flex;
-            align-items: center;
-            padding: 0 8px;
-            font-size: 0.85rem;
-            color: #333;
-            border-radius: 2px;
-            background: white;
-        }
-
-        .formula-actions {
-            color: #999;
-            font-size: 0.85rem;
-            display: flex;
-            gap: 8px;
-            padding: 0 4px;
-        }
-
-        .formula-input-wrapper {
-            flex: 1;
-            height: 24px;
-            border: 1px solid #d0d0d0;
-            border-radius: 2px;
-            display: flex;
-            align-items: center;
-            background: white;
-            overflow: hidden;
-        }
-
-        .formula-input {
-            width: 100%;
-            border: none;
-            outline: none;
-            padding: 0 8px;
-            font-size: 0.9rem;
-            font-family: inherit;
-        }
-
-        .formula-input:focus {
-            background: #fdfdfd;
-        }
-
-        /* Grid */
-        .grid-wrapper {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .grid-scroll-area {
-            flex: 1;
-            overflow: auto;
-            position: relative;
-            background: #f0f0f0;
-            /* Grid line color essentially */
-        }
-
-        /* CSS Grid Implementation */
-        .excel-grid {
-            display: grid;
-            /* Columns defined in JS */
-            /* Rows defined in JS */
-            background: white;
-            position: relative;
-        }
-
-        /* Headers */
-        .col-header {
-            background: var(--header-bg);
-            border-right: 1px solid var(--excel-border);
-            border-bottom: 1px solid var(--excel-border);
-            text-align: center;
-            font-size: 0.75rem;
-            color: var(--header-text);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: sticky;
-            top: 0;
-            height: 24px;
-            z-index: 10;
-            user-select: none;
-        }
-
-        .col-header:hover {
-            background: #eaeaea;
-        }
-
-        .col-header.active {
-            background: #e0e0e0;
-            color: var(--excel-green);
-            border-bottom: 2px solid var(--excel-green);
-        }
-
-        .row-header {
-            background: var(--header-bg);
-            border-right: 1px solid var(--excel-border);
-            border-bottom: 1px solid var(--excel-border);
-            text-align: center;
-            font-size: 0.75rem;
-            color: var(--header-text);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: sticky;
-            left: 0;
-            width: 40px;
-            z-index: 10;
-            user-select: none;
-        }
-
-        .row-header:hover {
-            background: #eaeaea;
-        }
-
-        .row-header.active {
-            background: #e0e0e0;
-            color: var(--excel-green);
-            border-right: 2px solid var(--excel-green);
-        }
-
-        .select-all-btn {
-            position: sticky;
-            top: 0;
-            left: 0;
-            width: 40px;
-            height: 24px;
-            background: var(--header-bg);
-            border-right: 1px solid var(--excel-border);
-            border-bottom: 1px solid var(--excel-border);
-            z-index: 20;
-            cursor: pointer;
-        }
-
-        .select-all-btn::after {
-            content: '';
-            position: absolute;
-            bottom: 4px;
-            right: 4px;
-            border-top: 6px solid transparent;
-            border-left: 6px solid transparent;
-            border-bottom: 6px solid #ccc;
-        }
-
-        /* Cells */
-        .cell {
-            background: white;
-            border-right: 1px solid var(--grid-line);
-            border-bottom: 1px solid var(--grid-line);
-            padding: 0 4px;
-            font-size: 13px;
-            /* Standard excel font size */
-            color: #000;
-            outline: none;
-            white-space: nowrap;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            cursor: cell;
-        }
-
-        .cell.editing {
-            cursor: text;
-            background: white;
-            z-index: 20;
-            /* Above selection borders */
-            outline: 2px solid var(--excel-green) !important;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .cell.selected {
-            outline: 2px solid var(--selection-border) !important;
-            outline-offset: -2px;
-            /* Inner outline */
-            z-index: 5;
-            position: relative;
-        }
-
-        /* Fill Handle Visual */
-        .cell.selected::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            right: -4px;
-            width: 7px;
-            height: 7px;
-            background: var(--excel-green);
-            border: 1px solid white;
-            z-index: 6;
-            cursor: crosshair;
-        }
-
-        .cell.range-selected {
-            background-color: var(--selection-bg);
-            border: 1px double var(--selection-border) !important;
-        }
-
-        /* Status Bar (Bottom Sheet Tabs) */
-        .status-bar {
-            height: 32px;
-            background: #f3f3f3;
-            border-top: 1px solid var(--excel-border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0;
-            flex-shrink: 0;
-            font-size: 0.8rem;
-        }
-
-        .sheet-tabs {
-            display: flex;
-            align-items: center;
-            height: 100%;
-            padding-left: 10px;
-            gap: 2px;
-            overflow-x: auto;
-            white-space: nowrap;
-            max-width: 100%;
-            scrollbar-width: none;
-            /* Hide scrollbar for cleaner look */
-        }
-
-        .sheet-tabs::-webkit-scrollbar {
-            display: none;
-        }
-
-        .nav-arrows {
-            display: flex;
-            gap: 12px;
-            color: #666;
-            margin-right: 12px;
-            font-size: 0.7rem;
-            opacity: 0.5;
-            /* Disabled look for now */
-        }
-
-        .sheet-tab {
-            padding: 0 16px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            background: #e0e0e0;
-            color: #666;
-            font-weight: 500;
-            border-radius: 4px 4px 0 0;
-            margin-top: 4px;
-            position: relative;
-            cursor: pointer;
-            border: 1px solid transparent;
-            min-width: 60px;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .sheet-tab:hover {
-            background: #eaeaea;
-        }
-
-        .sheet-tab.active {
-            background: white;
-            color: var(--excel-green);
-            font-weight: 700;
-            box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .sheet-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--excel-green);
-        }
-
-        .new-sheet-btn {
-            width: 28px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            cursor: pointer;
-            color: #666;
-            font-size: 0.9rem;
-            transition: 0.2s;
-        }
-
-        .new-sheet-btn:hover {
-            background: #e0e0e0;
-            color: black;
-        }
-
-        .status-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding-right: 16px;
-            color: #666;
-        }
-
-        .zoom-slider {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .zoom-track {
-            width: 100px;
-            height: 3px;
-            background: #ccc;
-            border-radius: 2px;
-            position: relative;
-        }
-
-        .zoom-thumb {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #666;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Loading Overlay */
-        .loading-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            color: var(--excel-green);
-            font-weight: 500;
-            gap: 12px;
-        }
-
-        .spinner {
-            width: 32px;
-            height: 32px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid var(--excel-green);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Custom Scrollbar for Grid */
-        .grid-scroll-area::-webkit-scrollbar {
-            width: 14px;
-            height: 14px;
-        }
-
-        .grid-scroll-area::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        .grid-scroll-area::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border: 3px solid #f1f1f1;
-            border-radius: 8px;
-        }
-
-        .grid-scroll-area::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-
-        .grid-scroll-area::-webkit-scrollbar-corner {
-            background: #f1f1f1;
-        }
-
-        /* Resize Handles */
-        .resizer-col {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 5px;
-            bottom: 0;
-            cursor: col-resize;
-            z-index: 20;
-        }
-
-        .resizer-col:hover {
-            background: var(--excel-green);
-        }
-
-        .resizer-row {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            cursor: row-resize;
-            z-index: 20;
-        }
-
-        .resizer-row:hover {
-            background: var(--excel-green);
-        }
-
-        /* Multi-selection Borders */
-        .cell.sel-border-top {
-            border-top: 2px solid var(--excel-green) !important;
-        }
-
-        .cell.sel-border-bottom {
-            border-bottom: 2px solid var(--excel-green) !important;
-        }
-
-        .cell.sel-border-left {
-            border-left: 2px solid var(--excel-green) !important;
-        }
-
-        .cell.sel-border-right {
-            border-right: 2px solid var(--excel-green) !important;
-        }
-
-        .cell.selected {
-            outline: 2px solid var(--excel-green) !important;
-            outline-offset: -2px;
-            z-index: 10;
-            background-color: white;
-            /* Active cell usually white */
-        }
-
-        .cell.range-selected {
-            background-color: var(--selection-bg);
-            /* Borders handled by specific classes now */
-        }
-
-        .color-menu {
-            position: absolute;
-            top: 110%;
-            left: 0;
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            padding: 10px;
-            z-index: 100;
-            display: none;
-            border-radius: 6px;
-            width: 170px;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .color-palette {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 4px;
-            margin-bottom: 4px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 8px;
-        }
-
-        .color-swatch {
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            cursor: pointer;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            transition: transform 0.1s;
-        }
-
-        .color-swatch:hover {
-            transform: scale(1.2);
-            z-index: 2;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            border-color: #666;
-        }
-
-        .color-menu.show {
-            display: flex;
-        }
-
-        .color-field {
-            width: 100%;
-            height: 32px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 0;
-            background: none;
-        }
-
-        .apply-btn {
-            background-color: var(--excel-green);
-            color: white;
-            border: none;
-            padding: 6px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            width: 100%;
-            font-weight: 500;
-        }
-
-        .apply-btn:hover {
-            background-color: var(--excel-dark-green);
-        }
-
-        /* Context Menu */
-        .context-menu {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 0, 0, 0.08);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            width: 160px;
-            border-radius: 12px;
-            padding: 6px;
-            animation: menuFadeIn 0.15s ease-out;
-        }
-
-        @keyframes menuFadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .context-menu-item {
-            padding: 10px 12px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: #4b5563;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-radius: 8px;
-            transition: all 0.1s;
-            font-weight: 500;
-        }
-
-        .context-menu-item:hover {
-            background-color: #f3f4f6;
-            color: #111;
-        }
-
-        .context-menu-item i {
-            font-size: 1rem;
-            color: #6b7280;
-            width: 20px;
-            text-align: center;
-        }
-
-        .context-menu-item:hover i {
-            color: #4b5563;
-        }
-
-        .context-menu-item.danger {
-            color: #ef4444;
-        }
-
-        .context-menu-item.danger i {
-            color: #ef4444;
-        }
-
-        .context-menu-item.danger:hover {
-            background-color: #fee2e2;
-            color: #dc2626;
-        }
-
-        .context-menu-divider {
-            height: 1px;
-            background: #eee;
-            margin: 4px 0;
-            width: 100%;
-        }
-    </style>
+    <link rel="stylesheet" href="/css/spreadsheet_editor.css">
 </head>
 
 <body>
@@ -915,7 +51,8 @@ try {
     <div class="excel-title-bar">
         <div class="title-left">
             <?php $is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin'; ?>
-            <a href="<?php echo $is_admin ? '/admin_dashboard.php' : '/index.php'; ?>" class="back-btn" title="Back to Dashboard">
+            <a href="/tools/timesheet.php?team_id=<?php echo htmlspecialchars($teamId); ?>" class="back-btn"
+                title="Back to Dashboard">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
             <div class="app-icon"><i class="fa-solid fa-table"></i></div>
@@ -985,7 +122,8 @@ try {
                     </button>
                     <div id="menuTextColor" class="color-menu">
                         <div class="color-palette" id="paletteTextColor"></div>
-                        <input type="color" id="inputTextColor" class="color-field" value="#000000">
+                        <input type="color" id="inputTextColor" class="color-field" value="#000000"
+                            oninput="pickColor('color', this.value)">
                         <button class="apply-btn" onclick="applyColor('color')">Apply</button>
                     </div>
                 </div>
@@ -1002,7 +140,8 @@ try {
                                 style="background:#fff;border:1px solid #ccc;grid-column:span 6; width:100%; text-align:center; font-size:0.7rem; display:flex; align-items:center; justify-content:center;"
                                 onclick="pickColor('backgroundColor', 'transparent')">No Fill</div>
                         </div>
-                        <input type="color" id="inputFillColor" class="color-field" value="#ffffff">
+                        <input type="color" id="inputFillColor" class="color-field" value="#ffffff"
+                            oninput="pickColor('backgroundColor', this.value)">
                         <button class="apply-btn" onclick="applyColor('backgroundColor')">Apply</button>
                     </div>
                 </div>
@@ -1285,7 +424,7 @@ try {
                         const formatOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
                         const created = json.data.created_at ? new Date(json.data.created_at).toLocaleString(undefined, formatOptions) : '-';
                         const updated = json.data.updated_at ? new Date(json.data.updated_at).toLocaleString(undefined, formatOptions) : '-';
-                        dateInfo.innerHTML = `<span id="createdAtDisplay">Created: ${created}</span><span id="updatedAtDisplay">Updated: ${updated}</span>`;
+                        dateInfo.innerHTML = `<span id="createdAtDisplay" class="date-item">Created: ${created}</span><span id="updatedAtDisplay" class="date-item">Updated: ${updated}</span>`;
                     }
 
                     try {
@@ -2217,8 +1356,8 @@ try {
             const menu = document.getElementById(`menu${type}`);
             if (!menu) return;
 
-            // Check visibility BEFORE hiding others
             const wasVisible = menu.classList.contains('show');
+            const ribbon = document.querySelector('.ribbon-container');
 
             // Hide all menus
             document.querySelectorAll('.color-menu').forEach(el => el.classList.remove('show'));
@@ -2226,61 +1365,42 @@ try {
             // Toggle desired menu
             if (!wasVisible) {
                 menu.classList.add('show');
+                if (ribbon) ribbon.classList.add('menu-open');
+            } else {
+                if (ribbon) ribbon.classList.remove('menu-open');
             }
         }
 
         // Override pickColor to be smarter
         function pickColor(prop, color) {
+            const inputId = (prop === 'color') ? 'inputTextColor' : 'inputFillColor';
+            const indicatorId = (prop === 'color') ? 'indicatorColor' : 'indicatorBg';
+            const input = document.getElementById(inputId);
+
             if (color === 'transparent') {
                 runCmd(prop, 'transparent');
-                document.getElementById('indicatorBg').style.background = 'white'; // approximate
-                document.querySelectorAll('.color-menu').forEach(el => el.classList.remove('show'));
+                if (indicatorId === 'indicatorBg') document.getElementById(indicatorId).style.background = 'white';
                 return;
             }
 
-            let inputId = prop === 'color' ? 'inputTextColor' : 'inputFillColor';
-            const input = document.getElementById(inputId);
-
-            // Convert to hex if needed (though our array is hex)
-            // If color is rgb, convert? Browsers handle color input differently.
-            // Let's assume hex from our array.
-            input.value = color;
-
-            // Apply immediately? Or wait? 
-            // "need a color pallet with apply button" implies the apply button is the main trigger.
-            // BUT standard UX is click palette = apply.
-            // Let's implement: Click Palette -> Updates Input (Preview?) -> User clicks Apply.
-            // But updating input doesn't show preview on cells. 
-            // It just updates the color picker box.
-            // Let's make palette click APPLY IMMEDIATELY for better UX, and the Apply button is for the CUSTOM input below.
-
-            applyColor(prop);
+            if (input) input.value = color;
+            document.getElementById(indicatorId).style.background = color;
+            runCmd(prop, color);
         }
 
         function applyColor(prop) {
-            let inputId = prop === 'color' ? 'inputTextColor' : 'inputFillColor';
-            let val = document.getElementById(inputId).value;
-
-            // Handle "No Fill" case from palette interaction if we want to store state?
-            // Actually, if they clicked "No Fill" swatch, we can't store "transparent" in the color input.
-            // So we need a separate tracker or just apply immediately for No Fill?
-            // Let's make "No Fill" apply immediately to avoid confusion.
-
-            // For standard colors:
-            // update indicator
-            if (prop === 'color') document.getElementById('indicatorColor').style.background = val;
-            if (prop === 'backgroundColor') document.getElementById('indicatorBg').style.background = val;
-
-            runCmd(prop, val);
-
-            // Hide menus
+            // Simply close the active menu
             document.querySelectorAll('.color-menu').forEach(el => el.classList.remove('show'));
+            const ribbon = document.querySelector('.ribbon-container');
+            if (ribbon) ribbon.classList.remove('menu-open');
         }
 
         // Close menus when clicking outside
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.color-menu') && !e.target.closest('button[onclick^="toggleColorMenu"]')) {
                 document.querySelectorAll('.color-menu').forEach(el => el.classList.remove('show'));
+                const ribbon = document.querySelector('.ribbon-container');
+                if (ribbon) ribbon.classList.remove('menu-open');
             }
         });
 

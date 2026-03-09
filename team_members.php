@@ -12,12 +12,10 @@ if (!$is_admin) {
     exit;
 }
 
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 $teamId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+if ($teamId) {
+    $_SESSION['last_team_id'] = $teamId;
+}
 
 if (!$teamId) {
     header('Location: /manage_teams.php');
@@ -152,7 +150,7 @@ $schemeIndex = abs(crc32($team['name'])) % count($gradientSchemes);
 $teamColorPrimary = $gradientSchemes[$schemeIndex][0];
 $teamColorSecondary = $gradientSchemes[$schemeIndex][1];
 
-$GLOBALS['currentPage'] = 'teams';
+
 startLayout($team['name'] . ' Hub', $user);
 ?>
 
@@ -175,744 +173,60 @@ startLayout($team['name'] . ' Hub', $user);
         --team-color-border:
             <?php echo $teamColorPrimary; ?>
             25;
-        --glass-bg: rgba(255, 255, 255, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.5);
-        --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.02);
-    }
-
-    html,
-    body {
-        overflow: hidden;
-        height: 100vh;
-        margin: 0;
-    }
-
-    /* Hub Scroller for fixed viewport */
-    #layout-content {
-        height: 100vh;
-        overflow-y: auto;
-        padding-bottom: 2rem;
-    }
-
-    /* Main Content Padding Override */
-    .main-content {
-        padding: 1.5rem 2rem !important;
-        max-width: 1600px !important;
-    }
-
-    /* Floating Background Blobs */
-    .tactical-bg-blob {
-        position: fixed;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(circle, var(--team-color-light) 0%, transparent 70%);
-        top: -10%;
-        right: -10%;
-        z-index: -1;
-        pointer-events: none;
-        animation: float-blob 20s infinite alternate ease-in-out;
-    }
-
-    @keyframes float-blob {
-        from {
-            transform: translate(0, 0) rotate(0deg);
-        }
-
-        to {
-            transform: translate(-50px, 50px) rotate(10deg);
-        }
-    }
-
-    /* Premium Glass Header */
-    .hub-header {
-        background: #ffffff;
-        border: 1px solid var(--border);
-        border-radius: 24px;
-        padding: 1.25rem 2.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .hub-header::before {
-        display: none;
-    }
-
-    .hub-avatar {
-        width: 72px;
-        height: 72px;
-        border-radius: 20px;
-        background: var(--team-gradient);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        color: white;
-        font-weight: 700;
-        box-shadow: 0 10px 20px
+        --team-color-shadow: 0 15px 35px
             <?php echo $teamColorPrimary; ?>
-            20;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .hub-title h1 {
-        font-size: 2.25rem;
-        font-weight: 800;
-        color: #1e293b;
-        letter-spacing: -0.04em;
-        line-height: 1;
-        margin-bottom: 0.4rem;
-        text-transform: uppercase;
-    }
-
-    /* Assigned Tools Header */
-    .header-tools {
-        display: flex;
-        gap: 0.75rem;
-        margin-top: 1.25rem;
-    }
-
-    .tool-badge-mini {
-        width: 42px;
-        height: 42px;
-        border-radius: 12px;
-        background: #f1f5f9;
-        border: 1.5px solid #e1e7ef;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-        color: #475569;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        text-decoration: none;
-        cursor: pointer;
-        position: relative;
-    }
-
-    .tool-badge-mini:hover {
-        transform: translateY(-4px) scale(1.1);
-        z-index: 10;
-        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
-    }
-
-    .tool-badge-mini.active {
-        color: #3b82f6;
-        background: #eff6ff;
-        border-color: #dbeafe;
-    }
-
-    .tool-badge-mini.active:hover {
-        border-color: #3b82f630;
-        background: #3b82f608;
-    }
-
-    .tool-badge-mini.word.active {
-        color: #2b579a;
-        background: #eff6ff;
-        border-color: #dbeafe;
-    }
-
-    .tool-badge-mini.spreadsheet.active {
-        color: #217346;
-        background: #f0fdf4;
-        border-color: #dcfce7;
-    }
-
-    .tool-badge-mini.calendar.active {
-        color: #d93025;
-        background: #fef2f2;
-        border-color: #fee2e2;
-    }
-
-    .tool-badge-mini.chat.active {
-        color: #1a73e8;
-        background: #e8f0fe;
-        border-color: #d2e3fc;
-    }
-
-    .tool-badge-mini.filemanager.active {
-        color: #f9ab00;
-        background: #fffcf0;
-        border-color: #feefc3;
-    }
-
-    .tool-badge-mini.tasksheet.active {
-        color: #188038;
-        background: #e6f4ea;
-        border-color: #ceead6;
-    }
-
-    .tool-badge-mini.leadrequirement.active {
-        color: #a142f4;
-        background: #f3e8fd;
-        border-color: #e9d2fd;
-    }
-
-    /* Single Column Layout */
-    .bento-hub {
-        display: block;
-        /* Full container table */
-        width: 100%;
-    }
-
-    /* Glass Bento Card */
-    .bento-card {
-        background: #ffffff;
-        border-radius: 24px;
-        border: 1px solid var(--border);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
-        overflow: hidden;
-        transition: all 0.4s ease;
-        width: 100%;
-    }
-
-    .bento-card:hover {
-        /* Hover effect removed per user request */
-    }
-
-    .card-header-lux {
-        padding: 1.25rem 2.5rem;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #fafafa;
-    }
-
-    .card-header-lux h2 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #334155;
-        margin: 0;
-        letter-spacing: -0.02em;
-        text-transform: uppercase;
-    }
-
-    /* Tactical Table */
-    .table-responsive {
-        width: 100%;
-        overflow-x: auto;
-        max-height: 480px;
-        overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: var(--team-color-border) transparent;
-    }
-
-    .table-responsive::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .table-responsive::-webkit-scrollbar-thumb {
-        background: var(--team-color-border);
-        border-radius: 10px;
-    }
-
-    .tactical-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .tactical-table th {
-        padding: 1rem 1.5rem;
-        background: #f8fafc;
-        text-align: left;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #64748b;
-        border-bottom: 1px solid var(--border);
-        white-space: nowrap;
-    }
-
-    .tactical-table td {
-        padding: 0.5rem 1.25rem;
-        border-bottom: 1px solid var(--glass-border);
-        vertical-align: middle;
-        transition: all 0.3s ease;
-    }
-
-    .tactical-table tr:hover td {
-        /* Row hover background removed per user request */
-    }
-
-    .tactical-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    /* Operative Profile */
-    .op-profile {
-        display: flex;
-        align-items: center;
-        gap: 1.25rem;
-    }
-
-    .op-avatar {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        background: #f8fafc;
-        border: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        color: var(--team-color);
-    }
-
-    .op-id {
-        font-family: 'JetBrains Mono', monospace;
-        font-weight: 600;
-        color: var(--text-muted);
-        background: #f1f5f9;
-        padding: 0.3rem 0.6rem;
-        border-radius: 8px;
-        font-size: 0.75rem;
-        border: 1px solid var(--border);
-    }
-
-    /* Glass Modal */
-    .glass-modal {
-        background: rgba(15, 23, 42, 0.4);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 2000;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-    }
-
-    .glass-modal.show {
-        display: flex;
-    }
-
-    .modal-box {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(40px);
-        -webkit-backdrop-filter: blur(40px);
-        border-radius: 40px;
-        width: 100%;
-        max-width: 850px;
-        padding: 2.5rem 3.5rem;
-        box-shadow: 0 30px 100px -20px rgba(0, 0, 0, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-        position: relative;
-    }
-
-    @keyframes scaleIn {
-        from {
-            transform: scale(0.9) translateY(20px);
-            opacity: 0;
-        }
-
-        to {
-            transform: scale(1) translateY(0);
-            opacity: 1;
-        }
-    }
-
-    .input-premium {
-        width: 100%;
-        background: white;
-        border: 2px solid var(--glass-border);
-        border-radius: 20px;
-        padding: 1.1rem 1.4rem;
-        font-size: 1rem;
-        font-weight: 600;
-        color: #1e293b;
-        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        margin-bottom: 1.25rem;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02) inset;
-    }
-
-    .input-premium:focus {
-        border-color: var(--team-color);
-        background: white;
-        box-shadow: 0 15px 30px var(--team-color-light);
-        outline: none;
-        transform: scale(1.02);
-    }
-
-    .label-lux {
-        display: block;
-        font-size: 0.65rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        color: #94a3b8;
-        letter-spacing: 0.12em;
-        margin-bottom: 0.75rem;
-        padding-left: 0.5rem;
-    }
-
-    .btn-tactical {
-        background: var(--team-gradient);
-        color: white;
-        border: none;
-        width: 100%;
-        padding: 1rem;
-        border-radius: 14px;
-        font-weight: 600;
-        font-size: 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px
-            <?php echo $teamColorPrimary; ?>
-            20;
-    }
-
-    .btn-tactical:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 25px 50px
+            40;
+        --team-color-shadow-hover: 0 25px 50px
             <?php echo $teamColorPrimary; ?>
             60;
-        filter: brightness(1.1);
-    }
-
-    /* Add Member Button Premium */
-    .btn-add-op {
-        background: #ffffff;
-        color: var(--team-color);
-        border: 1px solid var(--border);
-        padding: 0.6rem 1.25rem;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 0.85rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .btn-add-op:hover {
-        background: #f8fafc;
-        border-color: var(--team-color);
-        transform: translateY(-1px);
-    }
-
-    .status-badge {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: #f0fdf4;
-        padding: 0.4rem 0.8rem;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.7rem;
-        color: #16a34a;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border: 1px solid #dcfce7;
-    }
-
-    .pulse {
-        width: 10px;
-        height: 10px;
-        background: var(--team-color);
-        border-radius: 50%;
-        box-shadow: 0 0 0 rgba(var(--team-color), 0.4);
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0% {
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-        }
-
-        70% {
-            box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-        }
-
-        100% {
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-        }
-    }
-
-    /* Action Icons */
-    .action-btn {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        border: 1px solid var(--glass-border);
-        background: white;
-        color: #64748b;
-        font-size: 0.9rem;
-    }
-
-    .action-btn:hover {
-        transform: translateY(-3px) scale(1.1);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-    }
-
-    .action-btn.reset:hover {
-        color: #3b82f6;
-        border-color: #3b82f630;
-        background: #3b82f608;
-    }
-
-    .action-btn.toggle:hover {
-        color: #f59e0b;
-        border-color: #f59e0b30;
-        background: #f59e0b08;
-    }
-
-    .action-btn.delete:hover {
-        color: #ef4444;
-        border-color: #ef444430;
-        background: #ef444408;
-    }
-
-    /* Filter Search Box */
-    .filter-wrapper {
-        position: relative;
-        width: 350px;
-    }
-
-    .filter-input {
-        width: 100%;
-        background: white;
-        border: 1.5px solid var(--glass-border);
-        padding: 0.7rem 1rem 0.7rem 3rem;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: #1e293b;
-        transition: all 0.3s ease;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.02);
-    }
-
-    .filter-input:focus {
-        border-color: var(--team-color);
-        box-shadow: 0 10px 25px var(--team-color-light);
-        outline: none;
-    }
-
-    .filter-icon {
-        position: absolute;
-        left: 1.25rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-        font-size: 1rem;
-        pointer-events: none;
-    }
-
-    .clear-search {
-        position: absolute;
-        right: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-        font-size: 1.1rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 5px;
-    }
-
-    .clear-search:hover {
-        color: #ef4444;
-        transform: translateY(-50%) scale(1.1);
-    }
-
-    .toolbar-info {
-        font-size: 0.7rem;
-        font-weight: 900;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        background: white;
-        padding: 0.6rem 1.25rem;
-        border-radius: 14px;
-        border: 1px solid var(--glass-border);
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-    }
-
-    .clear-search {
-        position: absolute;
-        right: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 5px;
-    }
-
-    /* Pagination */
-    .hub-pagination {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: rgba(255, 255, 255, 0.6);
-        padding: 0.35rem;
-        border-radius: 14px;
-        border: 1px solid var(--glass-border);
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-    }
-
-    .page-link {
-        width: 32px;
-        height: 32px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 800;
-        font-size: 0.75rem;
-        color: #64748b;
-        text-decoration: none;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .page-link:hover {
-        color: var(--team-color);
-        background: var(--team-color-light);
-    }
-
-    .page-link.active {
-        background: var(--team-color);
-        color: white;
-        border-color: var(--team-color);
-        box-shadow: 0 10px 20px var(--team-color-light);
-    }
-
-    .page-link.disabled {
-        opacity: 0.2;
-        pointer-events: none;
-        filter: grayscale(1);
-    }
-
-    /* Toast Notifications */
-    .toast-container {
-        position: fixed;
-        top: 2rem;
-        right: 2rem;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        pointer-events: none;
-    }
-
-    .toast {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 1.25rem 2rem;
-        min-width: 320px;
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--glass-border);
-        transform: translateX(120%);
-        transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        pointer-events: auto;
-    }
-
-    .toast.show {
-        transform: translateX(0);
-    }
-
-    .toast-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-        flex-shrink: 0;
-    }
-
-    .toast-success .toast-icon {
-        background: #10b98115;
-        color: #10b981;
-    }
-
-    .toast-error .toast-icon {
-        background: #ef444415;
-        color: #ef4444;
-    }
-
-    .toast-content h4 {
-        margin: 0;
-        font-weight: 900;
-        color: #0f172a;
-        font-size: 0.95rem;
-    }
-
-    .toast-content p {
-        margin: 0.25rem 0 0;
-        color: #64748b;
-        font-size: 0.85rem;
-        font-weight: 600;
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.5);
     }
 </style>
+<link rel="stylesheet" href="/css/admin/team_members.css">
+
 
 <div class="tactical-bg-blob"></div>
 
 <div class="hub-header fade-in">
-    <div style="display: flex; align-items: center; gap: 2rem;">
+    <?php
+    $toolsList = [
+        'word' => ['icon' => 'fa-file-word', 'path' => '/tools/word.php'],
+        'spreadsheet' => ['icon' => 'fa-file-excel', 'path' => '/tools/timesheet.php'],
+        'calendar' => ['icon' => 'fa-calendar-day', 'path' => '/tools/calendar.php'],
+        'chat' => ['icon' => 'fa-comments', 'path' => '/tools/chat.php'],
+        'filemanager' => ['icon' => 'fa-folder-open', 'path' => '/tools/files.php'],
+        'tasksheet' => ['icon' => 'fa-list-check', 'path' => '/tools/tasks.php'],
+        'leadrequirement' => ['icon' => 'fa-id-card-clip', 'path' => '/tools/leads.php']
+    ];
+    ?>
+    <div class="hub-header-left">
         <div class="hub-avatar">
             <?php echo strtoupper(substr($team['name'], 0, 1)); ?>
         </div>
         <div class="hub-title">
-            <h1>
-                <?php echo htmlspecialchars($team['name']); ?>
-            </h1>
-            <p style="color: #64748b; font-size: 1.1rem; font-weight: 500; margin: 0;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
+                <span
+                    style="font-size: 0.65rem; font-weight: 900; color: var(--team-color); background: var(--team-color-light); padding: 0.15rem 0.6rem; border-radius: 100px; letter-spacing: 0.1em;">TACTICAL
+                    UNIT</span>
+                <span style="font-size: 0.65rem; font-weight: 800; color: #94a3b8; letter-spacing: 0.05em;">ID:
+                    #<?php echo str_pad($team['id'], 3, '0', STR_PAD_LEFT); ?></span>
+            </div>
+            <h1 style="font-size: 1.8rem; letter-spacing: -0.04em;"><?php echo htmlspecialchars($team['name']); ?></h1>
+            <p
+                style="color: #64748b; font-size: 1rem; font-weight: 500; margin: 0.4rem 0 1rem 0; opacity: 0.8; max-width: 450px; line-height: 1.4;">
                 <?php echo htmlspecialchars($team['description'] ?: 'Commanding the strategic frontiers of user engagement.'); ?>
             </p>
-            <div class="header-tools">
+            <div class="header-tools" style="display: flex; gap: 0.65rem;">
                 <?php
-                $toolsList = [
-                    'word' => ['icon' => 'fa-file-word', 'path' => '/tools/word.php'],
-                    'spreadsheet' => ['icon' => 'fa-file-excel', 'path' => '/tools/timesheet.php'],
-                    'calendar' => ['icon' => 'fa-calendar-day', 'path' => '/tools/calendar.php'],
-                    'chat' => ['icon' => 'fa-comments', 'path' => '/tools/chat.php'],
-                    'filemanager' => ['icon' => 'fa-folder-open', 'path' => '/tools/files.php'],
-                    'tasksheet' => ['icon' => 'fa-list-check', 'path' => '/tools/tasks.php'],
-                    'leadrequirement' => ['icon' => 'fa-id-card-clip', 'path' => '/tools/leads.php']
-                ];
                 foreach ($toolsList as $toolKey => $data):
-                    if ($team['tool_' . $toolKey] == 1 || $user['role'] === 'admin'):
-                        $isActive = $team['tool_' . $toolKey] == 1;
+                    if (isset($team['tool_' . $toolKey]) && $team['tool_' . $toolKey] == 1):
                         ?>
-                        <a href="<?php echo $data['path']; ?>?team_id=<?php echo $teamId; ?>"
-                            class="tool-badge-mini <?php echo $toolKey; ?> <?php echo $isActive ? 'active' : ''; ?>" title="<?php echo ucfirst($toolKey);
-                                       echo !$isActive ? ' (Not Enabled for Team)' : ''; ?>">
+                        <div class="tool-badge-mini active <?php echo $toolKey; ?>"
+                            style="width: 38px; height: 38px; border-radius: 11px; font-size: 0.95rem;"
+                            title="<?php echo ucfirst($toolKey); ?>">
                             <i class="fa-solid <?php echo $data['icon']; ?>"></i>
-                        </a>
+                        </div>
                         <?php
                     endif;
                 endforeach;
@@ -920,17 +234,24 @@ startLayout($team['name'] . ' Hub', $user);
             </div>
         </div>
     </div>
-    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 1rem;">
-        <div class="status-badge">
-            <div class="pulse"></div> System Nominal
-        </div>
-        <div style="display: flex; gap: 1rem;">
-            <div style="text-align: right;">
+    <div class="hub-header-right">
+        <div style="margin-bottom: 1.25rem;">
+            <div class="status-badge"
+                style="display: inline-flex; padding: 0.4rem 1rem; border-radius: 100px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.1);">
+                <div class="pulse" style="width: 7px; height: 7px;"></div>
                 <span
-                    style="display: block; font-size: 1.5rem; font-weight: 950; color: #0f172a; line-height: 1;"><?php echo $totalMembers; ?></span>
-                <span
-                    style="font-size: 0.65rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">Operatives</span>
+                    style="font-size: 0.65rem; font-weight: 900; color: #10b981; letter-spacing: 0.1em; padding-left: 0.4rem;">SYSTEM
+                    NOMINAL</span>
             </div>
+        </div>
+        <div
+            style="background: white; padding: 1rem 1.5rem; border-radius: 20px; border: 1px solid rgba(0,0,0,0.03); box-shadow: 0 8px 15px rgba(0,0,0,0.02);">
+            <div style="font-size: 2.25rem; font-weight: 950; color: #1e293b; line-height: 1; letter-spacing: -0.05em;">
+                <?php echo $totalMembers; ?>
+            </div>
+            <div
+                style="font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 0.35rem;">
+                OPERATIVES</div>
         </div>
     </div>
 </div>
@@ -954,9 +275,9 @@ startLayout($team['name'] . ' Hub', $user);
     <!-- Main Deployment Grid (Full Width) -->
     <div class="bento-card fade-in">
         <div class="card-header-lux">
-            <div style="display: flex; align-items: center; width: 100%;">
+            <div class="header-lux-container">
                 <!-- Left Sector: Search -->
-                <div style="flex: 1; display: flex; align-items: center;">
+                <div class="lux-sector search-sector">
                     <form method="GET" class="filter-wrapper" action="team_members.php" id="searchForm">
                         <input type="hidden" name="id" value="<?php echo $teamId; ?>">
                         <i class="fa-solid fa-magnifying-glass filter-icon"></i>
@@ -971,7 +292,7 @@ startLayout($team['name'] . ' Hub', $user);
                 </div>
 
                 <!-- Center Sector: Pagination -->
-                <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
+                <div class="lux-sector pagination-sector">
                     <?php if ($totalPages > 1): ?>
                         <div class="hub-pagination">
                             <?php
@@ -995,7 +316,7 @@ startLayout($team['name'] . ' Hub', $user);
                 </div>
 
                 <!-- Right Sector: Deployment -->
-                <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+                <div class="lux-sector deployment-sector">
                     <button class="btn-add-op" onclick="toggleModal('recruitmentModal', true)">
                         <i class="fa-solid fa-user-plus"></i>
                         DEPLOY NEW OPERATIVE
@@ -1118,7 +439,7 @@ startLayout($team['name'] . ' Hub', $user);
         <form method="POST">
             <input type="hidden" name="action" value="add_member">
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem 2.5rem;">
+            <div class="recruitment-form-grid">
                 <div>
                     <label class="label-lux">Identity Information</label>
                     <input type="text" name="full_name" class="input-premium" placeholder="Full Legal Name" required>
@@ -1137,10 +458,8 @@ startLayout($team['name'] . ' Hub', $user);
                 </div>
             </div>
 
-            <div
-                style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 2.5rem; align-items: center; margin-top: 0.5rem;">
-                <div
-                    style="background: white; border: 2px dashed var(--glass-border); padding: 1rem 1.5rem; border-radius: 20px; display: flex; align-items: center; gap: 1rem;">
+            <div class="recruitment-submit-grid">
+                <div class="recruitment-info-box">
                     <div
                         style="width: 40px; height: 40px; border-radius: 12px; background: var(--team-color-light); color: var(--team-color); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
                         <i class="fa-solid fa-circle-info"></i>

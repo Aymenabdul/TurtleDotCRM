@@ -65,6 +65,8 @@ try {
         echo "[" . date('Y-m-d H:i:s') . "] Sent 2-min reminders for event: {$event['title']} (ID: {$event['id']})\n";
     }
 
+    NotificationService::flushPushQueue();
+
 } catch (Exception $e) {
     error_log("Calendar Cron Error: " . $e->getMessage());
     echo "Error: " . $e->getMessage() . "\n";

@@ -15,24 +15,46 @@ ini_set('max_execution_time', '300');
 ini_set('max_input_time', '300');
 
 try {
+    $isAdmin = (strtolower(trim($user['role'] ?? '')) === 'admin');
+
     if ($method === 'GET') {
         $action = $_GET['action'] ?? null;
         $teamId = $_GET['team_id'] ?? null;
 
         if ($action === 'channels') {
-            $isAdmin = (strtolower(trim($user['role'])) === 'admin');
 
             if ($teamId) {
-                $stmt = $pdo->prepare("SELECT * FROM channels WHERE team_id = ? ORDER BY name ASC");
-                $stmt->execute([$teamId]);
+                if ($isAdmin) {
+                    // Admins see all channels for the team
+                    $stmt = $pdo->prepare("SELECT * FROM channels WHERE team_id = ? ORDER BY name ASC");
+                    $stmt->execute([$teamId]);
+                } else {
+                    // Regular users see 'General' + channels where they are a member
+                    $stmt = $pdo->prepare("
+                        SELECT c.* 
+                        FROM channels c
+                        LEFT JOIN channel_members cm ON c.id = cm.channel_id AND cm.user_id = ?
+                        WHERE c.team_id = ? AND (c.name = 'General' OR cm.user_id IS NOT NULL)
+                        GROUP BY c.id
+                        ORDER BY c.name ASC
+                    ");
+                    $stmt->execute([$userId, $teamId]);
+                }
             } else {
                 if ($isAdmin) {
-                    // Admins see all channels if no team context
+                    // Admins see everything globally
                     $stmt = $pdo->query("SELECT * FROM channels ORDER BY team_id ASC, name ASC");
                 } else {
-                    // Regular users see channels for their assigned team
-                    $stmt = $pdo->prepare("SELECT * FROM channels WHERE team_id = ? ORDER BY name ASC");
-                    $stmt->execute([$user['team_id']]);
+                    // Regular users see 'General' for their team + joined channels
+                    $stmt = $pdo->prepare("
+                        SELECT c.* 
+                        FROM channels c
+                        LEFT JOIN channel_members cm ON c.id = cm.channel_id AND cm.user_id = ?
+                        WHERE c.team_id = ? AND (c.name = 'General' OR cm.user_id IS NOT NULL)
+                        GROUP BY c.id
+                        ORDER BY c.name ASC
+                    ");
+                    $stmt->execute([$userId, $user['team_id']]);
                 }
             }
             $channels = $stmt->fetchAll();
@@ -114,12 +136,35 @@ try {
             exit;
         }
 
-        // Default: Get messages
         $lastId = $_GET['last_id'] ?? 0;
         $channel = $_GET['channel'] ?? 'General';
         $teamId = $_GET['team_id'] ?? null;
         $isDm = (strpos($channel, 'dm-') === 0);
         $isGlobal = ($channel === 'General');
+
+        // 🛡️ SECURITY CHECK: Can this user see this channel? (Admins bypass this)
+        if (!$isGlobal && !$isAdmin) {
+            if ($isDm) {
+                $parts = explode('-', $channel);
+                if (!isset($parts[1]) || !isset($parts[2]) || ($parts[1] != $userId && $parts[2] != $userId)) {
+                    http_response_code(403);
+                    echo json_encode(['success' => false, 'message' => 'Access denied to this DM.']);
+                    exit;
+                }
+            } else {
+                $checkStmt = $pdo->prepare("
+                    SELECT 1 FROM channels c 
+                    JOIN channel_members cm ON c.id = cm.channel_id 
+                    WHERE c.name = ? AND cm.user_id = ?
+                ");
+                $checkStmt->execute([$channel, $userId]);
+                if (!$checkStmt->fetch()) {
+                    http_response_code(403);
+                    echo json_encode(['success' => false, 'message' => 'You are not a member of this channel.']);
+                    exit;
+                }
+            }
+        }
 
         $sql = "
             SELECT m.*, u.username, u.full_name, u.presence_status 
@@ -179,10 +224,19 @@ try {
                 $channelId = $pdo->lastInsertId();
 
                 if (isset($data['member_ids']) && is_array($data['member_ids'])) {
+                    $memberIds = $data['member_ids'];
+                    // Automatically add the creator if not in the list
+                    if (!in_array($userId, $memberIds)) {
+                        $memberIds[] = $userId;
+                    }
+
                     $mStmt = $pdo->prepare("INSERT IGNORE INTO channel_members (channel_id, user_id) VALUES (?, ?)");
-                    foreach ($data['member_ids'] as $mId) {
+                    foreach ($memberIds as $mId) {
                         $mStmt->execute([$channelId, $mId]);
                     }
+                } else {
+                    // Even if no member ids provided, add the creator
+                    $pdo->prepare("INSERT IGNORE INTO channel_members (channel_id, user_id) VALUES (?, ?)")->execute([$channelId, $userId]);
                 }
                 echo json_encode(['success' => true, 'id' => $channelId]);
                 exit;
@@ -382,6 +436,30 @@ try {
             exit;
         }
 
+        // 🛡️ SECURITY CHECK: Can this user post here? (Admins bypass this)
+        if (!$isGlobal && !$isAdmin) {
+            if ($isDm) {
+                $parts = explode('-', $channel);
+                if (!isset($parts[1]) || !isset($parts[2]) || ($parts[1] != $userId && $parts[2] != $userId)) {
+                    http_response_code(403);
+                    echo json_encode(['success' => false, 'message' => 'Access denied: You cannot message this person.']);
+                    exit;
+                }
+            } else {
+                $checkStmt = $pdo->prepare("
+                    SELECT 1 FROM channels c 
+                    JOIN channel_members cm ON c.id = cm.channel_id 
+                    WHERE c.name = ? AND cm.user_id = ?
+                ");
+                $checkStmt->execute([$channel, $userId]);
+                if (!$checkStmt->fetch()) {
+                    http_response_code(403);
+                    echo json_encode(['success' => false, 'message' => 'Unauthorized: You must be a member to send messages to this channel.']);
+                    exit;
+                }
+            }
+        }
+
         $attachments = [];
         if (isset($_FILES['attachment'])) {
             $files = $_FILES['attachment'];
@@ -438,88 +516,6 @@ try {
         $stmt->execute([$storeTeamId, $channel, $userId, $message]);
         $newMsgId = $pdo->lastInsertId();
 
-        // 🔔 Background Notification Trigger
-        try {
-            require_once __DIR__ . '/../lib/NotificationService.php';
-            $senderName = $user['full_name'] ?: ($user['username'] ?: 'Someone');
-
-            if ($isDm) {
-                // Direct Message push
-                $parts = explode('-', $channel);
-                $targetUserId = ($parts[1] == $userId) ? $parts[2] : $parts[1];
-                $tag = "chat-dm-" . min($userId, $targetUserId) . "-" . max($userId, $targetUserId);
-
-                // Get real unread count for the target user in this DM
-                $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM chat_messages WHERE channel = ? AND user_id != ? AND is_read = 0");
-                $cntStmt->execute([$channel, $targetUserId]);
-                $unreadCount = (int) $cntStmt->fetchColumn();
-
-                NotificationService::sendPushToUser($targetUserId, "New Message from $senderName", $message, "/tools/chat.php?team_id=$teamId", $tag, [
-                    'channel' => $channel,
-                    'unread_count' => $unreadCount,
-                    'type' => 'chat'
-                ]);
-            } else if ($isGlobal) {
-                // System-wide Global channel push
-                $tag = "chat-chan-General";
-                $stmtM = $pdo->prepare("SELECT id as user_id FROM users WHERE id != ? AND is_active = 1");
-                $stmtM->execute([$userId]);
-                while ($row = $stmtM->fetch()) {
-                    $uId = $row['user_id'];
-                    // Get unread count for General (checking the last_read record)
-                    $lrStmt = $pdo->prepare("SELECT last_read_message_id FROM channel_members_last_read WHERE user_id = ? AND channel_id = (SELECT id FROM channels WHERE name='General' LIMIT 1)");
-                    $lrStmt->execute([$uId]);
-                    $lastReadId = $lrStmt->fetchColumn() ?: 0;
-
-                    $cStmt = $pdo->prepare("SELECT COUNT(*) FROM chat_messages WHERE channel = 'General' AND id > ? AND user_id != ?");
-                    $cStmt->execute([$lastReadId, $uId]);
-                    $unreadCount = (int) $cStmt->fetchColumn();
-
-                    NotificationService::sendPushToUser($uId, "$senderName (Global)", $message, "/tools/chat.php?team_id=$teamId", $tag, [
-                        'channel' => 'General',
-                        'unread_count' => $unreadCount,
-                        'type' => 'chat'
-                    ]);
-                }
-            } else {
-                // Regular Channel push
-                $tag = "chat-chan-$channel";
-                // Get channel_id
-                $stmtC = $pdo->prepare("SELECT id FROM channels WHERE name = ? AND team_id = ?");
-                $stmtC->execute([$channel, $teamId]);
-                $chanInfo = $stmtC->fetch();
-                $chanId = $chanInfo ? $chanInfo['id'] : 0;
-
-                $stmtM = $pdo->prepare("
-                    SELECT user_id FROM channel_members cm 
-                    JOIN channels c ON cm.channel_id = c.id 
-                    WHERE c.name = ? AND c.team_id = ? AND cm.user_id != ?
-                ");
-                $stmtM->execute([$channel, $teamId, $userId]);
-                while ($row = $stmtM->fetch()) {
-                    $uId = $row['user_id'];
-                    // Get unread count for THIS channel for THIS user
-                    $lrStmt = $pdo->prepare("SELECT last_read_message_id FROM channel_members_last_read WHERE user_id = ? AND channel_id = ?");
-                    $lrStmt->execute([$uId, $chanId]);
-                    $lastReadId = $lrStmt->fetchColumn() ?: 0;
-
-                    $cStmt = $pdo->prepare("SELECT COUNT(*) FROM chat_messages WHERE channel = ? AND id > ? AND user_id != ?");
-                    $cStmt->execute([$channel, $lastReadId, $uId]);
-                    $unreadCount = (int) $cStmt->fetchColumn();
-
-                    NotificationService::sendPushToUser($uId, "#$channel: $senderName", $message, "/tools/chat.php?team_id=$teamId", $tag, [
-                        'channel' => $channel,
-                        'channel_id' => $chanId,
-                        'unread_count' => $unreadCount,
-                        'type' => 'chat'
-                    ]);
-                }
-            }
-        } catch (Exception $pushNoteErr) {
-            // Log push errors for debugging
-            error_log("Chat Push Notification Error: " . $pushNoteErr->getMessage() . " in " . $pushNoteErr->getFile() . " on line " . $pushNoteErr->getLine());
-        }
-
         // If DM, ensure thread is tracked and not marked as deleted
         if (strpos($channel, 'dm-') === 0) {
             $parts = explode('-', $channel);
@@ -535,7 +531,98 @@ try {
             }
         }
 
-        echo json_encode(['success' => true, 'id' => (int) $newMsgId]);
+        $response = json_encode(['success' => true, 'id' => (int) $newMsgId]);
+
+        // 🚀 Hyper-Speed Response: Close connection so browser can proceed
+        // before we start the slow process of sending push notifications.
+        if (ob_get_level() > 0)
+            ob_end_clean();
+        ignore_user_abort(true);
+        ob_start();
+        echo $response;
+        $size = ob_get_length();
+        header("Content-Length: $size");
+        header("Connection: close");
+        header("Content-Type: application/json");
+        ob_end_flush();
+        flush();
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        // 🔔 Background Notification Trigger (Now truly background for the browser)
+        try {
+            set_time_limit(120);
+            require_once __DIR__ . '/../lib/NotificationService.php';
+            $senderName = $user['full_name'] ?: ($user['username'] ?: 'Someone');
+
+            if ($isDm) {
+                // Direct Message push: Fast targeted query
+                $parts = explode('-', $channel);
+                $targetUserId = ($parts[1] == $userId) ? $parts[2] : $parts[1];
+                $tag = "chat-dm-" . min($userId, $targetUserId) . "-" . max($userId, $targetUserId);
+
+                $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM chat_messages WHERE channel = ? AND user_id != ? AND is_read = 0");
+                $cntStmt->execute([$channel, $targetUserId]);
+                $unreadCount = (int) $cntStmt->fetchColumn();
+
+                NotificationService::sendPushToUser($targetUserId, $senderName, $message, "/tools/chat.php?team_id=$teamId", $tag, [
+                    'channel' => $channel,
+                    'unread_count' => $unreadCount,
+                    'sender_id' => $userId,
+                    'type' => 'chat'
+                ]);
+            } else {
+                // Channel/Global push: Optimized batch query
+                $tag = $isGlobal ? "chat-chan-General" : "chat-chan-$channel";
+
+                if ($isGlobal) {
+                    $cidStmt = $pdo->prepare("SELECT id FROM channels WHERE name='General' LIMIT 1");
+                    $cidStmt->execute();
+                    $chanId = $cidStmt->fetchColumn();
+                    $queryChan = 'General';
+                    $memberSql = "SELECT id as user_id FROM users WHERE id != ? AND is_active = 1";
+                    $memberParams = [$userId];
+                } else {
+                    $stmtC = $pdo->prepare("SELECT id FROM channels WHERE name = ? AND team_id = ?");
+                    $stmtC->execute([$channel, $teamId]);
+                    $chanId = ($stmtC->fetch())['id'] ?? 0;
+                    $queryChan = $channel;
+                    $memberSql = "SELECT user_id FROM channel_members WHERE channel_id = ? AND user_id != ?";
+                    $memberParams = [$chanId, $userId];
+                }
+
+                // Calculate everyone's unread status in one pass
+                $sql = "
+                    SELECT members.user_id, COUNT(m.id) as unread_count
+                    FROM ($memberSql) as members
+                    LEFT JOIN channel_members_last_read lr ON lr.user_id = members.user_id AND lr.channel_id = ?
+                    LEFT JOIN chat_messages m ON m.channel = ? AND m.id > IFNULL(lr.last_read_message_id, 0) AND m.user_id != members.user_id
+                    GROUP BY members.user_id
+                ";
+
+                $finalParams = array_merge($memberParams, [$chanId, $queryChan]);
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($finalParams);
+
+                while ($row = $stmt->fetch()) {
+                    $notifTitle = $isGlobal ? $senderName : "$senderName (#$channel)";
+                    NotificationService::sendPushToUser($row['user_id'], $notifTitle, $message, "/tools/chat.php?team_id=$teamId", $tag, [
+                        'channel' => $queryChan,
+                        'channel_id' => $chanId,
+                        'unread_count' => (int) $row['unread_count'],
+                        'sender_id' => $userId,
+                        'type' => 'chat'
+                    ]);
+                }
+            }
+
+            // Finally, flush the queue
+            NotificationService::flushPushQueue();
+        } catch (Exception $pushNoteErr) {
+            // Log push errors for debugging
+            error_log("Chat Push Notification Error: " . $pushNoteErr->getMessage() . " in " . $pushNoteErr->getFile() . " on line " . $pushNoteErr->getLine());
+        }
         exit;
     }
 

@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
     <title>
         <?php echo $pageTitle ?? 'Turtle Dot'; ?>
     </title>
@@ -37,10 +38,9 @@
             border-left: 4px solid #10b981;
         }
 
-        /* Custom scrollbar */
+        /* Custom scrollbar - Hidden */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            display: none;
         }
 
         ::-webkit-scrollbar-track {
@@ -48,12 +48,7 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+            display: none;
         }
     </style>
 </head>

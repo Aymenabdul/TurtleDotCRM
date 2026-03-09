@@ -3,276 +3,36 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | Turtle Dot</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
+    <title>Turtledot</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#10b981">
+
+    <!-- iOS / Apple PWA Tags (REQUIRED for standalone install, not just a bookmark) -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TurtleDot | CRM">
+    <link rel="apple-touch-icon" href="/assets/images/turtle_logo_192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/assets/images/turtle_logo_192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/turtle_logo_192.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/assets/images/turtle_logo_192.png">
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(() => { });
+        }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Serif:opsz,wght@8..144,300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <style>
-        :root {
-            --primary: #10b981;
-            --primary-dark: #059669;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --input-bg: #f3f4f6;
-            --focus-ring: rgba(16, 185, 129, 0.2);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #ffffff;
-            min-height: 100vh;
-            display: flex;
-            align-items: stretch;
-        }
-
-        /* Layout */
-        .split-layout {
-            display: flex;
-            width: 100%;
-            min-height: 100vh;
-        }
-
-        /* Left Branding Panel */
-        .brand-panel {
-            flex: 1;
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 4rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .brand-panel::before {
-            content: '';
-            position: absolute;
-            top: -20%;
-            left: -20%;
-            width: 70%;
-            height: 70%;
-            background: radial-gradient(circle, rgba(52, 211, 153, 0.2) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .brand-panel::after {
-            content: '';
-            position: absolute;
-            bottom: -10%;
-            right: -10%;
-            width: 60%;
-            height: 60%;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .brand-content {
-            position: relative;
-            z-index: 10;
-            text-align: center;
-            max-width: 480px;
-        }
-
-        .brand-logo-large {
-            width: 120px;
-            height: auto;
-            margin-bottom: 0.5rem;
-            filter: drop-shadow(0 12px 24px rgba(16, 185, 129, 0.2));
-            transition: transform 0.5s ease;
-        }
-
-        .brand-logo-large:hover {
-            transform: scale(1.05) rotate(3deg);
-        }
-
-        .brand-title {
-            font-family: 'Roboto Serif', serif;
-            font-size: 3.5rem;
-            font-weight: 700;
-            color: #064e3b;
-            margin-bottom: 1rem;
-            letter-spacing: -0.02em;
-            text-transform: uppercase;
-            text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2), 0 0 30px rgba(16, 185, 129, 0.4);
-        }
-
-        .brand-desc {
-            font-size: 1.125rem;
-            color: #065f46;
-            line-height: 1.6;
-            margin-bottom: 2rem;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        /* Right Form Panel */
-        .form-panel {
-            flex: 0 0 500px;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 4rem;
-            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.03);
-            position: relative;
-            z-index: 20;
-        }
-
-        .login-header {
-            margin-bottom: 3rem;
-        }
-
-        .login-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-bottom: 0.5rem;
-        }
-
-        .login-subtitle {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: var(--text-main);
-            font-size: 0.9rem;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 1rem 1.25rem;
-            border: 2px solid transparent;
-            background-color: var(--input-bg);
-            border-radius: 12px;
-            font-size: 1rem;
-            color: var(--text-main);
-            transition: all 0.2s ease;
-            font-family: inherit;
-        }
-
-        .form-control:focus {
-            outline: none;
-            background-color: white;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px var(--focus-ring);
-        }
-
-        .form-control::placeholder {
-            color: #9ca3af;
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 1rem;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 1rem;
-        }
-
-        .btn-submit:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-        }
-
-        .btn-submit:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1.5rem;
-            font-size: 0.9rem;
-            display: none;
-        }
-
-        .alert-error {
-            background-color: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
-        }
-
-        .alert-success {
-            background-color: #ecfdf5;
-            color: #059669;
-            border: 1px solid #a7f3d0;
-        }
-
-        .alert.show {
-            display: block;
-            animation: slideDown 0.3s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 900px) {
-            .split-layout {
-                flex-direction: column;
-            }
-
-            .brand-panel {
-                flex: 0 0 200px;
-                padding: 2rem;
-            }
-
-            .brand-logo-large {
-                width: 60px;
-                margin-bottom: 1rem;
-            }
-
-            .brand-title {
-                font-size: 2rem;
-            }
-
-            .brand-desc {
-                display: none;
-            }
-
-            .form-panel {
-                flex: 1;
-                width: 100%;
-                padding: 2rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/css/login.css">
 </head>
 
 <body>

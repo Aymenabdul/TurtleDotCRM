@@ -12,6 +12,10 @@
 
 require_once __DIR__ . '/../../config.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = true)
 {
     ?>
@@ -32,7 +36,7 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
 
         <!-- PWA Manifest -->
         <link rel="manifest" href="/manifest.json">
-        <meta name="theme-color" content="#10b981">
+        <meta name="theme-color" content="#ffffff">
         <link rel="apple-touch-icon" href="/assets/images/turtle_logo_192.png">
 
         <!-- Font Awesome -->
@@ -116,7 +120,7 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                 --transition-slow: 0.3s ease;
 
                 /* Sidebar */
-                --sidebar-width: 300px;
+                --sidebar-width: 320px;
                 --sidebar-collapsed-width: 80px;
             }
 
@@ -282,14 +286,14 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
 
             /* ===== Sidebar ===== */
             .sidebar {
-                width: 320px;
-                height: 100vh;
+                width: var(--sidebar-width);
+                height: calc(100vh - 2rem);
                 position: fixed;
-                left: 0;
-                top: 0;
+                left: 1rem;
+                top: 1rem;
                 display: flex;
                 flex-direction: column;
-                transition: all var(--transition-base);
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 z-index: 2000;
                 overflow: visible !important;
                 background: transparent;
@@ -298,11 +302,14 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
             .sidebar-glass {
                 position: absolute;
                 inset: 0;
-                background: #ffffff;
-                border-right: 1px solid #e2e8f0;
-                box-shadow: 4px 0 15px rgba(0, 0, 0, 0.01);
+                background: rgba(119, 241, 133, 0.31);
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                border: 1px solid rgba(255, 255, 255, 0.32);
+                border-radius: 20px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
                 z-index: -1;
-                transition: all var(--transition-base);
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 pointer-events: none;
             }
 
@@ -312,6 +319,7 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
 
             .sidebar.collapsed {
                 width: var(--sidebar-collapsed-width);
+                align-items: center;
             }
 
             .sidebar-no-transition,
@@ -322,25 +330,20 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
 
             /* Sidebar Header */
             .sidebar-header {
-                padding: 0 2rem;
+                padding: 1.5rem 2rem;
                 display: flex;
                 align-items: center;
                 gap: 1.25rem;
-                background: rgba(255, 255, 255, 0.4);
-                /* Pure white glass header */
-                backdrop-filter: blur(10px);
-                height: 100px;
+                height: auto;
                 flex-shrink: 0;
                 justify-content: flex-start;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.03);
             }
 
             .sidebar-logo {
-                width: 55px;
+                width: 50px;
                 height: auto;
-                margin-left: -15px;
-                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
                 transition: transform var(--transition-base);
+                filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7));
             }
 
             .sidebar-title {
@@ -348,21 +351,21 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                 transition: opacity var(--transition-base), width var(--transition-base);
                 height: 120px;
                 object-fit: contain;
-                margin-top: 20px;
-                margin-left: -15px;
-                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
+                margin-top: -10%;
+                margin-bottom: -18%;
+                margin-left: -6%;
+                filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7));
             }
 
             .sidebar.collapsed .sidebar-header {
                 justify-content: center;
-                padding: 0 !important;
-                height: 120px;
+                padding: 1.5rem 0;
             }
 
             .sidebar.collapsed .sidebar-logo {
                 width: 52px;
                 margin: 0 !important;
-                filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+                filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7));
             }
 
             .sidebar.collapsed .sidebar-title {
@@ -372,83 +375,121 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
             /* Sidebar Navigation */
             .sidebar-nav {
                 flex: 1;
-                padding: 1.5rem 0.85rem;
+                padding: 0.5rem 1rem;
                 overflow-y: auto;
                 display: flex;
                 flex-direction: column;
-                gap: 0.4rem;
+                gap: 0.2rem;
             }
 
             .nav-item {
-                display: flex;
+                display: flex !important;
+                flex-direction: row !important;
                 align-items: center;
-                gap: 1.1rem;
-                padding: 0.85rem 1.1rem;
-                color: #334155;
-                /* Darker Slate-700 for high contrast */
-                text-decoration: none;
-                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                gap: 1rem;
+                padding: 0.75rem 1rem;
+                color: #64748b;
+                text-decoration: none !important;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 white-space: nowrap;
-                font-weight: 500;
-                font-size: 0.92rem;
+                font-weight: 700;
+                font-size: 0.85rem;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
                 position: relative;
                 border-radius: 12px;
+                margin: 4px 0;
                 border: 1px solid transparent;
-                margin: 0;
             }
 
             .nav-item:hover {
-                background: rgba(16, 185, 129, 0.1);
-                color: #10b981;
-                transform: scale(1.02);
-                border-color: rgba(16, 185, 129, 0.15);
+                background: rgba(255, 255, 255, 0.4);
+                color: #1e293b;
+                transform: translateX(4px);
             }
 
             .nav-item.active {
-                background: rgba(16, 185, 129, 0.1);
-                color: #10b981;
-                font-weight: 600;
-                border: 1px solid rgba(16, 185, 129, 0.1);
+                background: #ffffff !important;
+                color: var(--primary) !important;
+                font-weight: 800;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+                border: 1px solid #ffffff;
             }
 
-            .nav-item.active::before {
+            .nav-item.active i,
+            .nav-item.active span {
+                color: var(--primary) !important;
+                opacity: 1;
+            }
+
+            .nav-item.active::after {
                 content: '';
                 position: absolute;
-                left: -4px;
+                left: 0;
                 top: 25%;
                 height: 50%;
-                width: 4px;
-                background: #10b981;
+                width: 3px;
+                background: var(--primary);
                 border-radius: 0 4px 4px 0;
-                box-shadow: 0 0 15px #10b981;
-                transition: all 0.3s ease;
-            }
-
-            .nav-item.active:hover {
-                background: rgba(15, 23, 42, 0.95);
-                transform: translateY(-1px) scale(1.02);
+                box-shadow: 0 0 10px var(--primary);
             }
 
             .nav-item i {
-                font-size: 1.15rem;
                 width: 24px;
-                text-align: center;
-                flex-shrink: 0;
-                color: #10b981;
-                /* Consistent brand color */
-                opacity: 0.6;
-                /* Faded when inactive */
+                font-size: 1.1rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 transition: all 0.3s ease;
+                color: inherit;
+                opacity: 0.7;
             }
 
             .nav-item.active i {
                 opacity: 1;
-                filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4));
                 transform: scale(1.1);
             }
 
-            .nav-item-text {
-                transition: opacity var(--transition-base);
+            .team-indicator {
+                position: relative;
+                width: 34px;
+                height: 34px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 10px;
+                background: rgba(255, 255, 255, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.8);
+                font-weight: 800;
+                font-size: 0.95rem;
+                transition: all 0.3s ease;
+                color: var(--primary);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+            }
+
+            .team-indicator .status-indicator {
+                position: absolute;
+                top: -2px;
+                right: -2px;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #10b981;
+                border: 2px solid #ffffff;
+                box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+                z-index: 2;
+                transition: all 0.3s ease;
+            }
+
+            .team-indicator .status-indicator.decommissioned {
+                background: #ef4444;
+                box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+            }
+
+            .nav-item.active .team-indicator {
+                background: #ffffff;
+                border-color: #ffffff;
+                box-shadow: 0 4px 10px rgba(16, 185, 129, 0.1);
             }
 
             .sidebar.collapsed .nav-item-text {
@@ -472,18 +513,33 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                 font-size: 1.3rem;
             }
 
+            .sidebar.collapsed .nav-item .team-indicator {
+                margin: 0;
+                width: 44px;
+                height: 44px;
+                border-radius: 12px;
+                font-size: 1.1rem;
+                background: rgba(255, 255, 255, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
             .sidebar.collapsed .nav-item.active {
                 background: rgba(16, 185, 129, 0.1);
                 border: 1px solid rgba(16, 185, 129, 0.2);
             }
 
             .sidebar.collapsed .nav-item.active::before {
-                left: -14px;
-                height: 36px;
-                top: 9px;
+                left: 0;
+                height: 32px;
+                top: 50%;
+                transform: translateY(-50%);
                 border-radius: 0 6px 6px 0;
-                width: 5px;
-                box-shadow: 2px 0 12px rgba(16, 185, 129, 0.6);
+                width: 6px;
+                background: var(--primary);
+                box-shadow: 2px 0 15px rgba(16, 185, 129, 0.4);
             }
 
             .sidebar.collapsed .sidebar-nav {
@@ -493,32 +549,33 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
             }
 
             .sidebar-footer {
-                padding: 0.75rem 1rem;
+                padding: 1.5rem 1.25rem;
                 background: transparent;
-                border-top: 1px solid #f1f5f9;
+                border-top: 1px solid rgba(0, 0, 0, 0.05);
             }
 
             .sidebar-user-wrapper {
                 position: relative;
                 width: 100%;
-                margin-bottom: 0.5rem;
             }
 
             .sidebar-user {
                 display: flex;
                 align-items: center;
-                gap: 0.75rem;
-                padding: 0.5rem 0.75rem;
-                background: transparent;
-                border-radius: 12px;
+                gap: 1rem;
+                padding: 0.75rem;
+                background: rgba(255, 255, 255, 0.4);
+                border-radius: 18px;
+                border: 1px solid rgba(255, 255, 255, 0.5);
                 cursor: pointer;
-                transition: all var(--transition-base);
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 user-select: none;
-                margin-bottom: 0;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
             }
 
             .sidebar-user:hover {
-                background: #f8fafc;
+                background: rgba(255, 255, 255, 0.8);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
             }
 
             .sidebar.collapsed .sidebar-user-wrapper {
@@ -530,48 +587,84 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
             .sidebar.collapsed .sidebar-user {
                 padding: 0;
                 justify-content: center;
-                width: 54px;
-                height: 54px;
+                width: 50px;
+                height: 50px;
                 display: flex;
                 align-items: center;
-                border-radius: 18px;
-                background: rgba(16, 185, 129, 0.1);
-                border: 1px solid rgba(16, 185, 129, 0.15);
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.4);
+                border: 1px solid rgba(255, 255, 255, 0.6);
+            }
+
+            .sidebar.collapsed .sidebar-user-info,
+            .sidebar.collapsed .sidebar-user-role {
+                display: none !important;
+                visibility: hidden;
+                opacity: 0;
+                width: 0;
+                height: 0;
+                margin: 0;
+                padding: 0;
             }
 
             .sidebar-user-avatar {
-                width: 32px;
-                height: 32px;
-                border-radius: 8px;
-                background: #10b981;
-                color: white;
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.8);
+                backdrop-filter: blur(8px);
+                border: 1px solid rgba(255, 255, 255, 0.9);
+                color: var(--primary);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-weight: 700;
-                font-size: 0.9rem;
+                font-weight: 800;
+                font-size: 1.1rem;
                 flex-shrink: 0;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                transition: all 0.3s ease;
+                position: relative;
+            }
+
+            .sidebar-user-avatar::before {
+                content: '';
+                position: absolute;
+                inset: -2px;
+                border: 2px solid rgba(255, 255, 255, 0.6);
+                border-radius: 14px;
+                opacity: 0.7;
+            }
+
+            .sidebar-user-avatar:hover {
+                background: rgba(255, 255, 255, 0.8);
+                transform: scale(1.05);
             }
 
             .sidebar-user-info {
                 flex: 1;
                 min-width: 0;
-                transition: opacity var(--transition-base);
-            }
-
-            .sidebar.collapsed .sidebar-user-info {
-                opacity: 0;
-                width: 0;
-                display: none;
+                transition: all 0.3s ease;
             }
 
             .sidebar-user-name {
-                font-weight: 600;
+                font-weight: 700;
                 color: #1e293b;
-                font-size: 0.9rem;
+                font-size: 0.85rem;
+                line-height: 1.2;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+
+            .sidebar-user-role {
+                font-size: 0.65rem;
+                font-weight: 700;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-top: 2px;
             }
 
             /* User Dropdown Menu */
@@ -632,11 +725,13 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                 text-decoration: none;
                 border-radius: 8px;
                 transition: all var(--transition-base);
-                font-weight: 500;
-                font-size: 0.95rem;
+                font-weight: 700;
+                font-size: 0.82rem;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
                 cursor: pointer;
                 width: 100%;
-                background: transparent;
+                background: none;
                 border: none;
                 text-align: left;
             }
@@ -651,6 +746,12 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                 width: 20px;
                 text-align: center;
                 color: #64748b;
+                transition: all 0.2s ease;
+            }
+
+            .dropdown-item:hover i {
+                color: var(--primary);
+                transform: scale(1.1);
             }
 
             .dropdown-item.danger {
@@ -667,11 +768,11 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
             }
 
             .sidebar-user-role {
-                font-size: 0.72rem;
+                font-size: 0.65rem;
+                font-weight: 700;
                 color: #94a3b8;
                 text-transform: uppercase;
-                letter-spacing: 0.025em;
-                font-weight: 600;
+                letter-spacing: 0.05em;
                 margin-top: 2px;
             }
 
@@ -679,9 +780,7 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
             .sidebar-center-toggle {
                 position: absolute;
                 top: 50%;
-                left: 100%;
-                margin-left: -13px;
-                /* Precise placement on the edge */
+                left: calc(100% - 13px);
                 transform: translateY(-50%) translateZ(0);
                 width: 26px;
                 height: 26px;
@@ -695,9 +794,8 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                 box-shadow: 0 4px 10px rgba(16, 185, 129, 0.15);
                 color: #10b981;
                 z-index: 10000;
-                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 overflow: hidden;
-                backface-visibility: hidden;
             }
 
             .sidebar-center-toggle::after {
@@ -732,35 +830,41 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                 transform: rotate(180deg) translateX(-0.5px);
             }
 
-            /* Sidebar Section Header */
             .sidebar-section-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                margin: 2rem 1.1rem 0.75rem;
-                transition: all var(--transition-base);
-            }
-
-            .sidebar.collapsed .sidebar-section-header {
-                justify-content: center;
-                margin: 2rem 0 1rem;
+                margin: 1.5rem 1rem 0.5rem;
+                transition: all 0.3s ease;
             }
 
             .sidebar-section-title {
                 display: flex;
                 align-items: center;
                 gap: 0.75rem;
-                font-size: 0.65rem;
-                font-weight: 800;
-                text-transform: uppercase;
-                letter-spacing: 0.15em;
-                color: #94a3b8;
-                white-space: nowrap;
-                transition: all var(--transition-base);
+                position: relative;
             }
 
-            .sidebar.collapsed .sidebar-section-title span,
-            .sidebar.collapsed .sidebar-section-header .fa-plus-circle {
+            .sidebar-section-title i {
+                font-size: 1rem;
+                color: #94a3b8;
+                opacity: 0.8;
+            }
+
+            .sidebar-section-title span {
+                font-size: 0.65rem;
+                font-weight: 800;
+                color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: 0.15em;
+            }
+
+            .sidebar.collapsed .sidebar-section-header {
+                justify-content: center;
+                margin: 1.5rem 0 0.5rem;
+            }
+
+            .sidebar.collapsed .sidebar-section-title span {
                 display: none;
             }
 
@@ -797,27 +901,23 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                 }
             }
 
-            .sidebar-section-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                margin: 2rem 1.1rem 0.75rem;
-                transition: all var(--transition-base);
-            }
 
             .sidebar-section-title {
                 display: flex;
                 align-items: center;
-                gap: 0.75rem;
-                transition: opacity var(--transition-base);
+                gap: 0.85rem;
+                transition: all 0.3s ease;
+                position: relative;
             }
 
+
             .sidebar-section-title span {
-                font-size: 0.75rem;
-                font-weight: 800;
+                font-size: 0.65rem;
+                font-weight: 900;
                 color: #94a3b8;
                 text-transform: uppercase;
-                letter-spacing: 0.15em;
+                letter-spacing: 0.2em;
+                opacity: 0.8;
             }
 
             .sidebar.collapsed .sidebar-section-header {
@@ -838,15 +938,16 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
             /* ===== Main Content Area ===== */
             .main-wrapper {
                 flex: 1;
-                margin-left: var(--sidebar-width);
-                transition: margin-left var(--transition-base);
+                margin-left: calc(var(--sidebar-width) + 1rem);
+                /* Space for floating island */
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 min-height: 100vh;
                 display: flex;
                 flex-direction: column;
             }
 
             .sidebar.collapsed+.main-wrapper {
-                margin-left: var(--sidebar-collapsed-width);
+                margin-left: calc(var(--sidebar-collapsed-width) + 1rem);
             }
 
             .main-content {
@@ -1303,7 +1404,9 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
         </script>
         <?php
         if ($includeNavbar) {
+            global $pdo;
             $currentPage = $GLOBALS['currentPage'] ?? '';
+            $contextTeamId = $_GET['team_id'] ?? $_GET['id'] ?? $_SESSION['last_team_id'] ?? null;
             require __DIR__ . '/../components/sidebar.php';
         }
         ?>

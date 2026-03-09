@@ -6,9 +6,6 @@ $contextTeamId = $user['team_id'] ?? null;
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-glass"></div>
-    <button class="sidebar-center-toggle" onclick="toggleSidebar()">
-        <i class="fa-solid fa-chevron-left"></i>
-    </button>
     <div class="sidebar-header">
         <img src="/assets/images/turtle_logo.png" alt="Turtle Symbol" class="sidebar-logo">
         <img src="/assets/images/textlogo.png" alt="Turtle Dot" class="sidebar-title">
@@ -18,7 +15,7 @@ $contextTeamId = $user['team_id'] ?? null;
         <!-- User Navigation -->
         <a href="/index.php"
             class="nav-item <?php echo ($currentPage === 'index' || $currentPage === 'dashboard') ? 'active' : ''; ?>">
-            <i class="fa-solid fa-house"></i>
+            <i class="fa-solid fa-grip"></i>
             <span class="nav-item-text">Dashboard</span>
         </a>
 
@@ -34,13 +31,13 @@ $contextTeamId = $user['team_id'] ?? null;
             }
 
             if ($team): ?>
-                <div class="sidebar-section-header">
+                <div class="sidebar-section-header" style="margin-top: 2rem;">
                     <div class="sidebar-section-title">
-                        <i class="fa-solid fa-toolbox" style="font-size: 0.9rem; color: #10b981;"></i>
-                        <span>Team Tools</span>
+                        <i class="fa-solid fa-bolt-lightning"></i>
+                        <span>Active Tools</span>
                     </div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 4px; padding: 0 0.65rem;">
+                <div class="sidebar-tools-list">
                     <?php
                     $tools = [
                         'tool_word' => ['name' => 'Word Engine', 'icon' => 'fa-file-word', 'url' => '/tools/word.php'],
@@ -51,16 +48,18 @@ $contextTeamId = $user['team_id'] ?? null;
                         'tool_tasksheet' => ['name' => 'Task Logic', 'icon' => 'fa-list-check', 'url' => '/tools/tasks.php'],
                         'tool_leadrequirement' => ['name' => 'Lead Intake', 'icon' => 'fa-id-card-clip', 'url' => '/tools/leads.php']
                     ];
+                    $currentPath = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
                     foreach ($tools as $key => $toolData):
                         if (isset($team[$key]) && $team[$key] == 1):
                             $toolUrl = $toolData['url'] . '?team_id=' . $team['id'];
-                            $isActive = (strpos($_SERVER['REQUEST_URI'], $toolData['url']) !== false);
+                            $toolPath = rtrim($toolData['url'], '/');
+                            $isActive = ($currentPath === $toolPath);
                             ?>
                             <a href="<?php echo $toolUrl; ?>"
                                class="nav-item <?php echo $isActive ? 'active' : ''; ?>"
                                <?php echo ($key === 'tool_chat') ? 'id="sidebar-pulse-chat"' : ''; ?>>
                                  <i class="fa-solid <?php echo $toolData['icon']; ?>"></i>
-                                 <span class="nav-item-text" style="flex:1;">
+                                 <span class="nav-item-text">
                                      <?php echo $toolData['name']; ?>
                                  </span>
                                  <?php if ($key === 'tool_chat'): ?>
@@ -80,7 +79,7 @@ $contextTeamId = $user['team_id'] ?? null;
         <div class="sidebar-user-wrapper" tabindex="0" onblur="setTimeout(() => this.classList.remove('active'), 150)"
             onclick="this.classList.toggle('active')">
             <div class="sidebar-user">
-                <div class="sidebar-user-avatar" style="width: 40px; height: 40px; border-radius: 14px;">
+                <div class="sidebar-user-avatar">
                     <?php echo strtoupper(substr($user['username'] ?? 'U', 0, 1)); ?>
                 </div>
                 <div class="sidebar-user-info">
@@ -107,3 +106,4 @@ $contextTeamId = $user['team_id'] ?? null;
         </div>
     </div>
 </aside>
+ Broadway

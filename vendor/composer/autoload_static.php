@@ -10,6 +10,7 @@ class ComposerStaticInit1bae9e80265f85709f7235955fd3024a
         '7b11c4dc42b3b3023073cb14e519683c' => __DIR__ . '/..' . '/ralouphie/getallheaders/src/getallheaders.php',
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
         '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
+        '3109cb1a231dcd04bee1f9f620d46975' => __DIR__ . '/..' . '/paragonie/sodium_compat/autoload.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -19,9 +20,12 @@ class ComposerStaticInit1bae9e80265f85709f7235955fd3024a
         ),
         'P' =>
         array (
+            'Pusher\\' => 7,
+            'Psr\\Log\\' => 8,
             'Psr\\Http\\Message\\' => 17,
             'Psr\\Http\\Client\\' => 16,
             'Psr\\Clock\\' => 10,
+            'ParagonIE\\Sodium\\' => 17,
         ),
         'M' =>
         array (
@@ -49,6 +53,14 @@ class ComposerStaticInit1bae9e80265f85709f7235955fd3024a
         array (
             0 => __DIR__ . '/..' . '/spomky-labs/pki-framework/src',
         ),
+        'Pusher\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/pusher/pusher-php-server/src',
+        ),
+        'Psr\\Log\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/psr/log/src',
+        ),
         'Psr\\Http\\Message\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-factory/src',
@@ -61,6 +73,10 @@ class ComposerStaticInit1bae9e80265f85709f7235955fd3024a
         'Psr\\Clock\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/clock/src',
+        ),
+        'ParagonIE\\Sodium\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/paragonie/sodium_compat/namespaced',
         ),
         'Minishlink\\WebPush\\' =>
         array (

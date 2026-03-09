@@ -43,9 +43,8 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
     <!-- Workspace Nav -->
     <div class="workspace-nav" style="position: relative;">
         <div class="nav-left">
-            <?php $is_admin = isset($user['role']) && strtolower(trim($user['role'])) === 'admin'; ?>
-            <a href="<?php echo $is_admin ? '/admin_dashboard.php' : '/index.php'; ?>" class="btn-back"
-                title="Back to Dashboard">
+            <a href="/tools/word.php?team_id=<?php echo htmlspecialchars($teamId); ?>" class="btn-back"
+                title="Back to Documents">
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
             <div class="doc-icon-header">
@@ -63,13 +62,16 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
         </div>
 
         <!-- Centered Date Meta -->
-        <div class="date-meta"
-            style="display:none; position: absolute; left: 50%; transform: translateX(-50%); text-align: center; font-size: 0.7rem; color: var(--text-muted); white-space: nowrap;">
+        <div class="date-meta" id="dateMeta" style="display:none;">
             <span id="createdAtMeta">Created: -</span> <span style="margin: 0 4px;">•</span> <span
                 id="updatedAtMeta">Updated: -</span>
         </div>
 
         <div class="nav-actions">
+            <button class="btn-workspace-primary shine-effect" onclick="downloadDoc()" title="Download as DOCX"
+                style="background: #ffffff; color: #1e293b; border: 1.5px solid #e2e8f0; box-shadow: none;">
+                <i class="fa-solid fa-download"></i> Download
+            </button>
             <button class="btn-workspace-primary shine-effect" onclick="saveDoc()" id="saveBtn">
                 <i class="fa-solid fa-cloud-arrow-up"></i> Save
             </button>
@@ -121,14 +123,40 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
 
         <!-- Colors -->
         <div class="toolbar-section">
-            <div class="color-picker-wrapper" title="Text Color">
-                <input type="color" id="foreColorPicker" onchange="execCmd('foreColor', this.value)" value="#000000">
-                <label for="foreColorPicker" class="tool-btn"><i class="fa-solid fa-font"></i></label>
+            <div class="color-picker-wrapper" style="position:relative;">
+                <button class="tool-btn" onmousedown="event.preventDefault(); toggleColorMenu('TextColor')"
+                    title="Text Color">
+                    <i class="fa-solid fa-font"></i>
+                    <div id="indicatorColor"
+                        style="position:absolute;bottom:4px;left:6px;right:6px;height:3px;background:#000;"></div>
+                </button>
+                <div id="menuTextColor" class="color-menu">
+                    <div class="color-palette" id="paletteTextColor"></div>
+                    <div class="color-footer">
+                        <input type="color" id="inputTextColor" class="color-field" value="#000000"
+                            oninput="pickColor('foreColor', this.value)">
+                        <button class="apply-btn"
+                            onmousedown="event.preventDefault(); applyColor('foreColor')">Apply</button>
+                    </div>
+                </div>
             </div>
-            <div class="color-picker-wrapper" title="Highlighter">
-                <input type="color" id="hiliteColorPicker" onchange="execCmd('hiliteColor', this.value)"
-                    value="#ffff00">
-                <label for="hiliteColorPicker" class="tool-btn"><i class="fa-solid fa-highlighter"></i></label>
+
+            <div class="color-picker-wrapper" style="position:relative;">
+                <button class="tool-btn" onmousedown="event.preventDefault(); toggleColorMenu('HiliteColor')"
+                    title="Highlight Color">
+                    <i class="fa-solid fa-highlighter"></i>
+                    <div id="indicatorHilite"
+                        style="position:absolute;bottom:4px;left:6px;right:6px;height:3px;background:#ffff00;"></div>
+                </button>
+                <div id="menuHiliteColor" class="color-menu">
+                    <div class="color-palette" id="paletteHiliteColor"></div>
+                    <div class="color-footer">
+                        <input type="color" id="inputHiliteColor" class="color-field" value="#ffff00"
+                            oninput="pickColor('hiliteColor', this.value)">
+                        <button class="apply-btn"
+                            onmousedown="event.preventDefault(); applyColor('hiliteColor')">Apply</button>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="toolbar-divider"></div>
@@ -167,7 +195,8 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
     </div>
 
     <!-- Document Canvas -->
-    <div class="workspace-canvas">
+    <div class="workspace-canvas"
+        onclick="if(event.target === this || event.target.id === 'documentContainer') { restoreSelection(); }">
         <div id="documentContainer" class="canvas-inner">
             <!-- Pages injected here -->
             <div class="canvas-page" contenteditable="true" data-page="1">
@@ -180,530 +209,10 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
 <!-- Custom Confirmation Modal -->
 
 
-<style>
-    :root {
-        --workspace-nav-h: 64px;
-        --workspace-toolbar-h: 52px;
-        --accent: #2563eb;
-        --accent-hover: #1d4ed8;
-        --bg-darker: #f3f4f6;
-        --border-color: #e5e7eb;
-        --text-main: #1f2937;
-        --text-muted: #6b7280;
-    }
-
-    .workspace-wrapper {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--bg-darker);
-        z-index: 1001;
-        display: flex;
-        flex-direction: column;
-        color: var(--text-main);
-    }
-
-    /* Modern Nav Bar */
-    .workspace-nav {
-        height: var(--workspace-nav-h);
-        background: white;
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 1.5rem;
-        z-index: 10;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-    }
-
-    .nav-left {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .btn-back {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        color: var(--text-muted);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        text-decoration: none;
-        border: 1px solid transparent;
-    }
-
-    .btn-back:hover {
-        background: var(--bg-darker);
-        color: var(--text-main);
-        border-color: var(--border-color);
-    }
-
-    .doc-icon-header {
-        width: 36px;
-        height: 36px;
-        background: #eff6ff;
-        color: var(--accent);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-    }
-
-    .doc-meta {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    /* Custom Dropdown */
-    .custom-dropdown {
-        position: relative;
-        display: inline-block;
-    }
-
-    .custom-dropdown-trigger {
-        height: 34px;
-        padding: 0 10px;
-        border-radius: 6px;
-        border: 1px solid transparent;
-        /* Invisible border unless active/hover */
-        background: transparent;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        cursor: pointer;
-        font-size: 0.9rem;
-        color: var(--text-main);
-        font-weight: 500;
-        transition: all 0.2s;
-        min-width: 140px;
-        justify-content: space-between;
-    }
-
-    .custom-dropdown-trigger:hover {
-        background: var(--bg-darker);
-    }
-
-    .custom-dropdown-trigger.active {
-        background: #eff6ff;
-        color: var(--accent);
-        border-color: #dbeafe;
-    }
-
-    .custom-dropdown-menu {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        margin-top: 4px;
-        background: white;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        padding: 4px;
-        min-width: 180px;
-        z-index: 100;
-        display: none;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .custom-dropdown-menu.show {
-        display: flex;
-        animation: fadeIn 0.1s ease-out;
-    }
-
-    .dropdown-item {
-        padding: 8px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        font-size: 0.9rem;
-        color: var(--text-main);
-        transition: background 0.1s;
-    }
-
-    .dropdown-item:hover {
-        background: var(--bg-darker);
-    }
-
-    .dropdown-item.active {
-        background: #eff6ff;
-        color: var(--accent);
-    }
-
-    /* Styling for the visual representation in the dropdown */
-    .dropdown-item[data-value="p"] {
-        font-weight: 400;
-    }
-
-    .dropdown-item[data-value="h1"] {
-        font-size: 1.1rem;
-        font-weight: 700;
-    }
-
-    .dropdown-item[data-value="h2"] {
-        font-size: 1rem;
-        font-weight: 700;
-    }
-
-    .dropdown-item[data-value="h3"] {
-        font-size: 0.9rem;
-        font-weight: 700;
-    }
-
-    .dropdown-item[data-value="blockquote"] {
-        font-style: italic;
-        color: var(--text-muted);
-        border-left: 2px solid var(--border-color);
-        padding-left: 8px;
-    }
-
-    .dropdown-item[data-value="pre"] {
-        font-family: monospace;
-        font-size: 0.85rem;
-        background: #f3f4f6;
-    }
-
-    /* Arrow Icon */
-    .dropdown-arrow {
-        font-size: 0.7rem;
-        color: var(--text-muted);
-    }
-
-    .workspace-title-input {
-        background: transparent;
-        border: 1px solid transparent;
-        color: var(--text-main);
-        font-size: 1.1rem;
-        font-weight: 600;
-        outline: none;
-        padding: 2px 6px;
-        width: 300px;
-        border-radius: 4px;
-        transition: 0.2s;
-    }
-
-    .workspace-title-input:hover {
-        border-color: var(--border-color);
-    }
-
-    .workspace-title-input:focus {
-        border-color: var(--accent);
-        background: white;
-    }
-
-    .save-indicator {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding-left: 6px;
-    }
-
-    .save-indicator .dot {
-        width: 6px;
-        height: 6px;
-        background: #10b981;
-        border-radius: 50%;
-    }
-
-    .save-indicator.unsaved .dot {
-        background: #f59e0b;
-    }
-
-    .save-indicator .text {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-    }
-
-    .nav-actions {
-        display: flex;
-        gap: 0.75rem;
-    }
-
-    .btn-workspace-primary {
-        background: var(--accent);
-        color: white;
-        border: none;
-        padding: 0.5rem 1.25rem;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.2s;
-        font-size: 0.9rem;
-    }
-
-    .btn-workspace-primary:hover:not(:disabled) {
-        background: var(--accent-hover);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-    }
-
-    /* Floating Toolbar */
-    .workspace-toolbar {
-        height: var(--workspace-toolbar-h);
-        background: white;
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        padding: 0 1rem;
-        z-index: 5;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
-
-    .toolbar-section {
-        display: flex;
-        gap: 2px;
-        align-items: center;
-    }
-
-    .toolbar-divider {
-        width: 1px;
-        height: 20px;
-        background: var(--border-color);
-        margin: 0 6px;
-    }
-
-    .tool-btn {
-        width: 34px;
-        height: 34px;
-        border: none;
-        background: transparent;
-        border-radius: 6px;
-        color: var(--text-muted);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        font-size: 0.9rem;
-    }
-
-    .tool-btn:hover {
-        background: var(--bg-darker);
-        color: var(--text-main);
-    }
-
-    .tool-btn-labeled {
-        height: 34px;
-        border: none;
-        background: #f0fdf4;
-        border-radius: 6px;
-        color: #166534;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        padding: 0 1rem;
-        gap: 0.5rem;
-        transition: all 0.2s;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
-    .tool-btn-labeled:hover {
-        background: #dcfce7;
-    }
-
-    .tool-btn.active {
-        background: #eff6ff;
-        color: var(--accent);
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-        /* Added inset shadow for depth */
-        border: 1px solid #dbeafe;
-        /* Added border */
-    }
-
-    /* Color Picker */
-    .color-picker-wrapper {
-        position: relative;
-        width: 34px;
-        height: 34px;
-    }
-
-    .color-picker-wrapper input[type="color"] {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        opacity: 0;
-        cursor: pointer;
-        z-index: 2;
-    }
-
-    /* Scrollable Canvas */
-    .workspace-canvas {
-        flex: 1;
-        overflow-y: auto;
-        padding: 2rem;
-        display: flex;
-        justify-content: center;
-        background: #f8fafc;
-    }
-
-    .canvas-inner {
-        width: 100%;
-        max-width: 816px;
-        /* A4 width approx */
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-        padding-bottom: 4rem;
-    }
-
-    .canvas-page {
-        background: white;
-        width: 100%;
-        min-height: 1056px;
-        /* A4 height approx */
-        padding: 4rem 3rem;
-        /* Standard margins */
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        outline: none;
-        font-size: 11pt;
-        font-family: 'Calibri', 'Arial', sans-serif;
-        line-height: 1.6;
-        color: #000;
-        position: relative;
-    }
-
-    /* Page Controls Overlay */
-    /* Delete Button - Top Right */
-    .page-delete {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        opacity: 0;
-        transition: opacity 0.2s;
-        pointer-events: none;
-    }
-
-    .canvas-page:hover .page-delete {
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    /* Page Number - Bottom Center */
-    .page-number-container {
-        position: absolute;
-        bottom: 1rem;
-        left: 0;
-        right: 0;
-        display: flex;
-        justify-content: center;
-        pointer-events: none;
-    }
-
-    .page-number {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--text-muted);
-        background: rgba(255, 255, 255, 0.9);
-        padding: 4px 12px;
-        border-radius: 12px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        border: 1px solid var(--border-color);
-    }
-
-    .btn-remove-page {
-        background: white;
-        color: #ef4444;
-        border: 1px solid #fee2e2;
-        cursor: pointer;
-        font-size: 0.9rem;
-        padding: 6px;
-        border-radius: 6px;
-        transition: all 0.2s;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    .btn-remove-page:hover {
-        background: #fee2e2;
-        transform: translateY(-1px);
-    }
-
-    .canvas-page h1 {
-        font-size: 2em;
-        margin-bottom: 0.5em;
-    }
-
-    .canvas-page h2 {
-        font-size: 1.5em;
-        margin-bottom: 0.5em;
-    }
-
-    .canvas-page h3 {
-        font-size: 1.17em;
-        margin-bottom: 0.5em;
-    }
-
-    .canvas-page pre {
-        background: #f5f5f5;
-        padding: 1rem;
-        border-radius: 4px;
-        font-family: monospace;
-        white-space: pre-wrap;
-    }
-
-    .canvas-page blockquote {
-        border-left: 4px solid var(--accent);
-        margin: 1em 0;
-        padding-left: 1em;
-        color: var(--text-muted);
-    }
-
-    .canvas-page hr {
-        border: 0;
-        height: 1px;
-        background: #e5e7eb;
-        margin: 1.5rem 0;
-    }
-
-    /* Print media query for actual printing */
-    @media print {
-
-        .workspace-nav,
-        .workspace-toolbar,
-        .btn-back,
-        .page-controls {
-            display: none !important;
-        }
-
-        .workspace-wrapper {
-            position: static;
-            height: auto;
-            background: white;
-        }
-
-        .workspace-canvas {
-            padding: 0;
-            overflow: visible;
-        }
-
-        .canvas-page {
-            box-shadow: none;
-            margin: 0;
-            page-break-after: always;
-            min-height: auto;
-            padding: 0;
-        }
-    }
-</style>
-
+<link rel="stylesheet" href="/css/word_editor.css">
 <script>
-    const teamId = <?php echo $teamId; ?>;
-    const docId = <?php echo $docId ? $docId : 'null'; ?>;
+    const teamId = "<?php echo htmlspecialchars($teamId); ?>";
+    const docId = <?php echo $docId ? '"' . htmlspecialchars($docId) . '"' : 'null'; ?>;
     let isSaving = false;
     let pageToDelete = null;
 
@@ -712,32 +221,51 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
 
     // Track active page focus
     document.addEventListener('focusin', (e) => {
-        if (e.target.classList.contains('canvas-page')) {
+        if (e && e.target && e.target.classList && e.target.classList.contains('canvas-page')) {
             lastFocusedPage = e.target;
         }
     }, true);
 
     // Save Selection
     function saveSelection() {
-        const sel = window.getSelection();
-        if (sel.rangeCount > 0) {
-            const range = sel.getRangeAt(0);
-            // Only save if within our editor
-            if (range.commonAncestorContainer.closest('.canvas-page')) {
-                selectedRange = range;
+        try {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                // Only save if within our editor
+                const node = range.commonAncestorContainer;
+                if (node) {
+                    const container = node.nodeType === 3 ? node.parentElement : node;
+                    if (container && container.closest && container.closest('.canvas-page')) {
+                        selectedRange = range.cloneRange();
+                    }
+                }
             }
+        } catch (e) {
+            console.error('Selection save failed:', e);
         }
     }
 
     // Restore Selection
     function restoreSelection() {
         if (selectedRange) {
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(selectedRange);
-            // Also update lastFocusedPage if possible
-            const page = selectedRange.commonAncestorContainer.closest('.canvas-page');
-            if (page) lastFocusedPage = page;
+            try {
+                // Determine correctly which page to focus
+                const node = selectedRange.commonAncestorContainer;
+                const container = node.nodeType === 3 ? node.parentElement : node;
+                const page = container ? container.closest('.canvas-page') : null;
+                if (page) {
+                    lastFocusedPage = page;
+                    page.focus();
+                }
+
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(selectedRange);
+            } catch (e) {
+                console.warn('Selection restore failed', e);
+                if (lastFocusedPage) lastFocusedPage.focus();
+            }
         } else if (lastFocusedPage) {
             lastFocusedPage.focus();
         } else {
@@ -749,19 +277,15 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
     // Bind selection saving
     document.addEventListener('mouseup', saveSelection);
     document.addEventListener('keyup', saveSelection);
-    document.addEventListener('selectionchange', () => {
-        // Debounce slightly or check active element
-        if (document.activeElement && document.activeElement.classList.contains('canvas-page')) {
-            saveSelection();
-        }
-    });
+    // Removed selectionchange to avoid conflicts with extensions like QuillBot
 
     function execCmd(cmd, value = null) {
         restoreSelection();
-        document.execCommand(cmd, false, value);
+        const res = document.execCommand(cmd, false, value);
         // Save new selection state after command
         saveSelection();
         updateToolbarState();
+        return res;
     }
 
     // Custom Dropdown Logic
@@ -813,15 +337,120 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('.custom-dropdown')) {
+        if (!e.target.closest('.custom-dropdown') && !e.target.closest('.color-picker-wrapper')) {
             document.querySelectorAll('.custom-dropdown-menu').forEach(menu => {
                 menu.classList.remove('show');
             });
             document.querySelectorAll('.custom-dropdown-trigger').forEach(btn => {
                 btn.classList.remove('active');
             });
+            document.querySelectorAll('.color-menu').forEach(menu => {
+                menu.classList.remove('show');
+            });
+            document.querySelector('.workspace-toolbar').classList.remove('menu-open');
         }
     });
+
+    // --- Color Palette Logic (Spreadsheet style) ---
+    const PALETTE_COLORS = [
+        '#000000', '#434343', '#666666', '#999999', '#cccccc', '#ffffff',
+        '#980000', '#ff0000', '#ff9900', '#ffff00', '#00ff00', '#00ffff',
+        '#4a86e8', '#0000ff', '#9900ff', '#ff00ff', '#e6b8af', '#f4cccc',
+        '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3',
+        '#d9d2e9', '#ead1dc', '#dd7e6b', '#ea9999', '#f9cb9c', '#ffe599',
+        '#b6d7a8', '#a2c4c9', '#a4c2f4', '#9fc5e8', '#b4a7d6', '#d5a6bd',
+        '#cc4125', '#e06666', '#f6b26b', '#ffd966', '#93c47d', '#76a5af',
+        '#6d9eeb', '#6fa8dc', '#8e7cc3', '#c27ba0', '#a61c00', '#cc0000',
+        '#e69138', '#f1c232', '#6aa84f', '#45818e', '#3c78d8', '#3d85c6',
+        '#674ea7', '#a64d79'
+    ];
+
+    function initPalettes() {
+        const createSwatch = (color, cmd) => {
+            const el = document.createElement('div');
+            el.className = 'color-swatch';
+            el.style.backgroundColor = color;
+            el.title = color;
+            el.onmousedown = (e) => {
+                e.preventDefault(); // Prevents focus loss
+                pickColor(cmd, color);
+            };
+            return el;
+        };
+
+        const pText = document.getElementById('paletteTextColor');
+        const pHilite = document.getElementById('paletteHiliteColor');
+
+        if (pText) PALETTE_COLORS.forEach(c => pText.appendChild(createSwatch(c, 'foreColor')));
+        if (pHilite) PALETTE_COLORS.forEach(c => pHilite.appendChild(createSwatch(c, 'hiliteColor')));
+    }
+
+    function toggleColorMenu(type) {
+        // Close others
+        document.querySelectorAll('.color-menu').forEach(m => {
+            if (m.id !== `menu${type}`) m.classList.remove('show');
+        });
+        document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.remove('show'));
+
+        const menu = document.getElementById(`menu${type}`);
+        if (menu) {
+            const isOpening = !menu.classList.contains('show');
+            if (isOpening) saveSelection();
+            menu.classList.toggle('show');
+
+            // Handle toolbar overflow state
+            const toolbar = document.querySelector('.workspace-toolbar');
+            if (isOpening) toolbar.classList.add('menu-open');
+            else toolbar.classList.remove('menu-open');
+        }
+    }
+
+    function pickColor(cmd, color) {
+        const inputId = (cmd === 'foreColor') ? 'inputTextColor' : 'inputHiliteColor';
+        const indicatorId = (cmd === 'foreColor') ? 'indicatorColor' : 'indicatorHilite';
+
+        document.getElementById(inputId).value = color;
+        document.getElementById(indicatorId).style.background = color;
+
+        // Try to apply the command. Browsers can be picky about hiliteColor vs backColor
+        if (cmd === 'hiliteColor') {
+            if (!execCmd('hiliteColor', color)) {
+                execCmd('backColor', color);
+            }
+        } else {
+            execCmd(cmd, color);
+        }
+    }
+
+    function applyColor(cmd) {
+        document.querySelectorAll('.color-menu').forEach(m => m.classList.remove('show'));
+        document.querySelector('.workspace-toolbar').classList.remove('menu-open');
+    }
+
+    // Call init
+    initPalettes();
+
+    // Enable CSS-based formatting for reliable color application
+    try {
+        document.execCommand('styleWithCSS', false, true);
+    } catch (e) {
+        console.warn('styleWithCSS not supported');
+    }
+
+    // Override toggleDropdown to handle toolbar scroll
+    const originalToggleDropdown = toggleDropdown;
+    toggleDropdown = function (id) {
+        originalToggleDropdown(id);
+        const container = document.getElementById(id);
+        if (!container) return;
+        const menu = container.querySelector('.custom-dropdown-menu');
+        const toolbar = document.querySelector('.workspace-toolbar');
+        if (menu && menu.classList.contains('show')) {
+            toolbar.classList.add('menu-open');
+        } else {
+            toolbar.classList.remove('menu-open');
+        }
+    };
 
     // Simplified remove logic using glass-confirm
     function requestRemovePage(btn) {
@@ -829,10 +458,9 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
         if (container.children.length <= 1) {
             Confirm.show({
                 title: 'Cannot Delete',
-                message: 'You cannot delete the last page of the document.',
+                text: 'You cannot delete the last page of the document.',
                 type: 'info',
-                confirmText: 'OK',
-                // No onConfirm needed as it's just info
+                confirmText: 'OK'
             });
             return;
         }
@@ -841,7 +469,7 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
 
         Confirm.show({
             title: 'Delete Page',
-            message: 'Are you sure you want to delete this page? All content on this page will be permanently lost.',
+            text: 'Are you sure you want to delete this page? All content on this page will be permanently lost.',
             confirmText: 'Delete Page',
             type: 'danger',
             onConfirm: confirmRemovePage
@@ -1011,32 +639,50 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
                 document.querySelector('.date-meta').style.display = 'block';
 
                 if (result.data.content) {
-                    document.getElementById('documentContainer').innerHTML = result.data.content;
+                    const container = document.getElementById('documentContainer');
+                    container.innerHTML = result.data.content;
 
-                    document.querySelectorAll('.canvas-page').forEach(p => {
+                    // Ensure structure: if no canvas-page exists, wrap everything in one
+                    if (!container.querySelector('.canvas-page')) {
+                        const content = container.innerHTML;
+                        container.innerHTML = `<div class="canvas-page" contenteditable="true" data-page="1">${content}</div>`;
+                    }
+
+                    document.querySelectorAll('.canvas-page').forEach((p, idx) => {
+                        const pageNum = idx + 1;
                         p.contentEditable = true;
+                        p.setAttribute('data-page', pageNum);
+
+                        // Ensure it has listeners
                         p.addEventListener('input', handleInput);
                         p.addEventListener('mouseup', updateToolbarState);
                         p.addEventListener('keyup', updateToolbarState);
-                        p.addEventListener('click', updateToolbarState);
 
-                        // Fix for content missing new controls structure
+                        // Ensure clickable
+                        if (!p.innerHTML.trim().replace(/<div[^>]*>.*<\/div>/g, '')) {
+                            const pTag = document.createElement('p');
+                            pTag.innerHTML = '<br>';
+                            p.appendChild(pTag);
+                        }
+
+                        // Fix structures
                         if (!p.querySelector('.page-delete')) {
-                            // Prepend Delete
                             const delDiv = document.createElement('div');
                             delDiv.className = 'page-delete';
                             delDiv.contentEditable = false;
                             delDiv.innerHTML = `<button class="btn-remove-page" onclick="requestRemovePage(this)" title="Remove Page"><i class="fa-solid fa-trash"></i></button>`;
-                            p.insertBefore(delDiv, p.firstChild);
+                            p.prepend(delDiv);
                         }
 
                         if (!p.querySelector('.page-number-container')) {
-                            // Append Bottom Page Number
                             const numDiv = document.createElement('div');
                             numDiv.className = 'page-number-container';
                             numDiv.contentEditable = false;
-                            numDiv.innerHTML = `<span class="page-number">Page</span>`;
+                            numDiv.innerHTML = `<span class="page-number">Page ${pageNum}</span>`;
                             p.appendChild(numDiv);
+                        } else {
+                            const numSpan = p.querySelector('.page-number');
+                            if (numSpan) numSpan.textContent = `Page ${pageNum}`;
                         }
                     });
                     updatePageNumbers();
@@ -1101,9 +747,13 @@ startLayout($docId ? "Edit Document" : "New Document", $user, false);
     });
 
     // Add listener to initial page
-    document.querySelectorAll('.canvas-page').forEach(p => p.addEventListener('input', handleInput));
+    document.querySelectorAll('.canvas-page').forEach(p => {
+        if (p) p.addEventListener('input', handleInput);
+    });
 
-    loadDocument();
+    if (typeof loadDocument === 'function') {
+        loadDocument();
+    }
 </script>
 
 <?php include __DIR__ . '/../src/components/ui/glass-confirm.php'; ?>

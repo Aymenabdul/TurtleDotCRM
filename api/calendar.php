@@ -56,6 +56,7 @@ try {
                 "/tools/calendar.php?team_id=" . $data['team_id']
             );
         }
+        NotificationService::flushPushQueue();
 
     } elseif ($method === 'PATCH') {
         $data = json_decode(file_get_contents('php://input'), true);
@@ -110,6 +111,7 @@ try {
                     "/tools/calendar.php?team_id=" . $tId
                 );
             }
+            NotificationService::flushPushQueue();
         }
 
     } elseif ($method === 'DELETE') {
