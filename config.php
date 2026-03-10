@@ -4,9 +4,9 @@
 
 // Database credentials
 $db_host = 'localhost';
-$db_name = 'u771821149_turtletod';
-$db_user = 'u771821149_turtle';
-$db_pass = 'tu&rt$D@tCr(0M';
+$db_name = 'lead_maintenance';
+$db_user = 'root';
+$db_pass = 'Parkour@123';
 $db_charset = 'utf8mb4';
 
 $dsn = "mysql:host=$db_host;dbname=$db_name;charset=$db_charset";

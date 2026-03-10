@@ -6,6 +6,9 @@ $contextTeamId = $user['team_id'] ?? null;
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-glass"></div>
+    <div class="sidebar-center-toggle" onclick="toggleSidebar()">
+        <i class="fa-solid fa-chevron-left"></i>
+    </div>
     <div class="sidebar-header">
         <img src="/assets/images/turtle_logo.png" alt="Turtle Symbol" class="sidebar-logo">
         <img src="/assets/images/textlogo.png" alt="Turtle Dot" class="sidebar-title">
@@ -97,6 +100,10 @@ $contextTeamId = $user['team_id'] ?? null;
                     <i class="fa-solid fa-user"></i>
                     <span>Profile Settings</span>
                 </a>
+                <button class="dropdown-item pwa-install-btn" onclick="installPWA()" style="display: none;">
+                    <i class="fa-solid fa-cloud-arrow-down"></i>
+                    <span>Download App</span>
+                </button>
                 <div style="height: 1px; background: #e2e8f0; margin: 4px 0;"></div>
                 <button onclick="logout()" class="dropdown-item danger">
                     <i class="fa-solid fa-sign-out-alt"></i>

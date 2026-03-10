@@ -287,17 +287,14 @@ body {
 }
 
 .sidebar-title {
-    height: 28px;
-    width: 140px;
-    background-image: url('/assets/images/textlogo.png');
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: left center;
-    margin-left: -0.25rem;
+    height: 110px;
+    width: auto;
+    object-fit: contain;
+    margin-top: 20px;
+    margin-left: -17px;
     opacity: 1;
     filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
     transition: opacity var(--transition-base);
-    flex-shrink: 0;
 }
 
 .sidebar.collapsed .sidebar-header {
