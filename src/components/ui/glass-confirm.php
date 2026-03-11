@@ -34,17 +34,28 @@
             const title = document.getElementById('confirm-modal-title');
             const text = document.getElementById('confirm-modal-text');
             const confirmBtn = document.getElementById('confirm-modal-confirm');
+            const iconContainer = document.getElementById('confirm-modal-icon');
 
             title.innerText = options.title || 'Confirm Action';
-            text.innerText = options.text || 'Are you sure?';
+            text.innerText = options.text || options.message || 'Are you sure?';
             confirmBtn.innerText = options.confirmText || 'Confirm';
-            confirmBtn.style.background = options.type === 'danger' ? '#ef4444' : '#10b981';
-            confirmBtn.style.boxShadow = options.type === 'danger' ? '0 4px 12px rgba(239, 68, 68, 0.2)' : '0 4px 12px rgba(16, 185, 129, 0.2)';
-
-            const iconContainer = document.getElementById('confirm-modal-icon');
-            iconContainer.style.background = options.type === 'danger' ? '#fee2e2' : '#dcfce7';
-            iconContainer.style.color = options.type === 'danger' ? '#ef4444' : '#10b981';
-            iconContainer.innerHTML = `<i class="fa-solid ${options.icon || 'fa-triangle-exclamation'}"></i>`;
+            
+            // Color Mapping
+            const colors = {
+                danger: { bg: '#ef4444', light: '#fee2e2', shadow: 'rgba(239, 68, 68, 0.2)' },
+                success: { bg: '#10b981', light: '#dcfce7', shadow: 'rgba(16, 185, 129, 0.2)' },
+                primary: { bg: '#3b82f6', light: '#dbeafe', shadow: 'rgba(59, 130, 246, 0.2)' },
+                warning: { bg: '#f59e0b', light: '#fef3c7', shadow: 'rgba(245, 158, 11, 0.2)' }
+            };
+            
+            const theme = colors[options.type] || colors.primary;
+            
+            confirmBtn.style.background = theme.bg;
+            confirmBtn.style.boxShadow = `0 4px 12px ${theme.shadow}`;
+            iconContainer.style.background = theme.light;
+            iconContainer.style.color = theme.bg;
+            
+            iconContainer.innerHTML = `<i class="fa-solid ${options.icon || (options.type === 'danger' ? 'fa-triangle-exclamation' : 'fa-circle-info')}"></i>`;
 
             overlay.style.display = 'flex';
             // Forced reflow
@@ -53,7 +64,14 @@
             box.style.transform = 'scale(1)';
 
             confirmBtn.onclick = async () => {
+                const btnOriginal = confirmBtn.innerHTML;
+                confirmBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...';
+                confirmBtn.disabled = true;
+                
                 if (options.onConfirm) await options.onConfirm();
+                
+                confirmBtn.innerHTML = btnOriginal;
+                confirmBtn.disabled = false;
                 this.hide();
             };
 
@@ -74,4 +92,5 @@
     };
 
     window.Confirm = Confirm;
+    window.custompopup = (options) => Confirm.show(options);
 </script>

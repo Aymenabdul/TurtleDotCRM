@@ -149,17 +149,36 @@ CREATE TABLE IF NOT EXISTS projects (
     INDEX (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Team Folders Table
+CREATE TABLE IF NOT EXISTS team_folders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    team_id INT NOT NULL,
+    parent_id INT DEFAULT NULL,
+    name VARCHAR(255) NOT NULL,
+    created_by INT NOT NULL,
+    assigned_to LONGTEXT,
+    assigned_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX (team_id),
+    INDEX (parent_id),
+    INDEX (created_by)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Team Files Table (Archive Vault)
 CREATE TABLE IF NOT EXISTS team_files (
     id INT AUTO_INCREMENT PRIMARY KEY,
     team_id INT NOT NULL,
+    folder_id INT NULL,
     file_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(255) NOT NULL,
-    file_size INT NOT NULL,
+    file_size BIGINT NOT NULL,
     file_type VARCHAR(100),
     uploaded_by INT NOT NULL,
+    assigned_to LONGTEXT,
+    assigned_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX (team_id),
+    INDEX (folder_id),
     INDEX (uploaded_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

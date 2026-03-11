@@ -283,6 +283,8 @@ body {
 .sidebar-logo {
     width: 44px;
     height: auto;
+    object-fit: contain;
+    flex-shrink: 0;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }
 
@@ -290,10 +292,13 @@ body {
     height: 100px;
     width: auto;
     object-fit: contain;
+    flex-shrink: 0;
     margin: 0;
     opacity: 1;
     filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
     transition: opacity var(--transition-base);
+    margin-top: 17px;
+    margin-left: -10px;
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
 }
@@ -914,9 +919,16 @@ body {
     flex: 1;
     padding: var(--spacing-2xl);
     max-width: 1400px;
+    /* Default for Admin */
     width: 100%;
     min-width: 0;
-    margin: 0 auto;
+}
+
+/* Increased width specifically for Users */
+.role-user .main-content {
+    max-width: none;
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
 }
 
 /* ===== Utility Classes ===== */
@@ -1192,17 +1204,14 @@ tbody tr:hover {
 
 .grid-2 {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    justify-content: center;
 }
 
 .grid-3 {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    justify-content: center;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
 }
 
 .grid-4 {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    justify-content: center;
 }
 
 /* Flex Utilities */

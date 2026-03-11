@@ -103,6 +103,9 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
                             if (typeof window.loadMessages === 'function') window.loadMessages();
                             if (typeof window.markChannelAsRead === 'function') window.markChannelAsRead();
                         }
+                    } else if (msgType === 'vault_sync') {
+                        console.log('Vault: Real-time update triggered via SW');
+                        if (typeof window.loadVault === 'function') window.loadVault();
                     }
                 });
             }
@@ -112,7 +115,7 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
     </head>
 
 
-    <body>
+    <body class="<?php echo (isset($user['role']) && strtolower(trim($user['role'])) === 'admin') ? 'role-admin' : 'role-user'; ?>">
         <script>
             // Immediate execution to prevent sidebar flicker
             (function () {
@@ -368,6 +371,7 @@ function endLayout()
 
                 const msgChannel = payload.data ? payload.data.channel : null;
                 const senderId = payload.data ? payload.data.sender_id : null;
+                const msgType = payload.data ? payload.data.type : null;
 
                 // Skip if it's from me
                 if (senderId && senderId == GLOBAL_USER_ID) {
@@ -388,6 +392,12 @@ function endLayout()
                     if (typeof window.loadMessages === 'function') window.loadMessages();
                     if (typeof window.markChannelAsRead === 'function') window.markChannelAsRead();
                     return; // Done!
+                }
+
+                if (msgType === 'vault_sync') {
+                    console.log('Vault: Real-time update triggered via FCM');
+                    if (typeof window.loadVault === 'function') window.loadVault();
+                    return;
                 }
 
                 // 3. MESSAGE FOR BACKGROUND CHANNEL — show toast + sound

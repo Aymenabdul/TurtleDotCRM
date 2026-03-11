@@ -39,7 +39,8 @@ try {
         'channel_members',
         'chat_messages',
         'dm_threads',
-        'channel_members_last_read'
+        'channel_members_last_read',
+        'team_folders'
     ];
     $existingTables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
     $missingTables = array_diff($criticalTables, $existingTables);
@@ -116,6 +117,17 @@ try {
         'dm_threads' => [
             'deleted_by_user1' => 'TINYINT DEFAULT 0',
             'deleted_by_user2' => 'TINYINT DEFAULT 0',
+        ],
+        'team_folders' => [
+            'parent_id' => 'INT NULL',
+            'created_by' => 'INT NULL',
+            'assigned_to' => 'LONGTEXT NULL',
+            'assigned_by' => 'INT NULL',
+        ],
+        'team_files' => [
+            'folder_id' => 'INT NULL',
+            'assigned_to' => 'LONGTEXT NULL',
+            'assigned_by' => 'INT NULL',
         ],
     ];
 
