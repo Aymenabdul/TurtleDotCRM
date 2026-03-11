@@ -165,14 +165,14 @@
     .item-icon-wrapper { width: 60px; height: 60px; font-size: 1.75rem; border-radius: 16px; margin-bottom: 1rem; }
     .item-name { font-size: 0.95rem; }
     
-    .selection-bar { width: 100%; gap: 1rem; flex-direction: column; padding: 1.25rem; bottom: 0; left: 0; transform: translateY(150%); border-radius: 0; }
+    .selection-bar { width: 100%; gap: 1rem; flex-direction: column; padding: 1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom)); bottom: 0; left: 0; transform: translateY(150%); border-radius: 0; }
     .selection-bar.active { transform: translateY(0); }
     .selection-info { border-right: none; padding-right: 0; text-align: center; }
     
     .share-modal { border-radius: 0 !important; position: fixed; bottom: 0; width: 100% !important; max-width: 100% !important; animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-    .modal-full .share-header { padding: 0.5rem 0.75rem; }
+    .modal-full .share-header { padding: calc(0.5rem + env(safe-area-inset-top)) 0.75rem 0.5rem; }
     .modal-full .share-header h3 { font-size: 1rem; }
     .modal-full .share-header button span { display: none; }
     .modal-full .share-header button i { margin: 0 !important; }
