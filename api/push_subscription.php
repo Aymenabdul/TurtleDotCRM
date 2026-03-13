@@ -20,9 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Check if it exists for this user
+        // Check if it exists for this user - use a more specific check for the endpoint
         $stmt = $pdo->prepare("SELECT id FROM user_push_subscriptions WHERE user_id = ? AND subscription_json LIKE ?");
-        $stmt->execute([$userId, "%" . $endpoint . "%"]);
+        $stmt->execute([$userId, '%"endpoint":"' . $endpoint . '"%']);
 
         if (!$stmt->fetch()) {
             $stmt = $pdo->prepare("INSERT INTO user_push_subscriptions (user_id, subscription_json) VALUES (?, ?)");

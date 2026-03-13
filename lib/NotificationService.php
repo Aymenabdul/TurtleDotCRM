@@ -19,8 +19,8 @@ class NotificationService
         global $pdo;
         error_log("Push: Queuing notification for UserID: $userId, Title: $title");
 
-        // Fetch the 3 most recent subscriptions for this user to avoid spamming stale devices
-        $stmt = $pdo->prepare("SELECT subscription_json FROM user_push_subscriptions WHERE user_id = ? ORDER BY id DESC LIMIT 3");
+        // Fetch the 10 most recent subscriptions for this user to avoid spamming stale devices
+        $stmt = $pdo->prepare("SELECT subscription_json FROM user_push_subscriptions WHERE user_id = ? ORDER BY id DESC LIMIT 10");
         $stmt->execute([$userId]);
         $subscriptions = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -51,25 +51,43 @@ class NotificationService
 
         $webPush = self::$webPushInstance;
 
-        $payloadData = [
-            'title' => $title,
-            'body' => $body,
-            'url' => $url,
-            'tag' => $tag
-        ];
+        // Unified payload for both Mobile (OS-level) and Desktop (Data-driven).
+        // The 'notification' key is essential for mobile background delivery.
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+        $host = $_SERVER['HTTP_HOST'] ?? 'turtledot.in';
+        $baseUrl = $protocol . $host;
 
-        if (!empty($extra)) {
-            $payloadData = array_merge($payloadData, $extra);
-        }
+        // STRATEGY: Data-only Push
+        // We do NOT send the 'notification' key. This prevents the OS/Browser from showing 
+        // an automatic, generic notification that competes with our Service Worker.
+        // The Service Worker will receive this 'data' payload and call showNotification() itself.
+        $payloadData = [
+            'data' => array_merge([
+                'title' => $title,
+                'body' => $body,
+                'url' => $url,
+                'tag' => $tag,
+                'icon' => $baseUrl . '/assets/images/turtle_logo_512.png',
+                'badge' => $baseUrl . '/assets/images/turtle_logo_192.png'
+            ], $extra)
+        ];
 
         $payload = json_encode($payloadData);
 
+        // Deduplicate endpoints to prevent sending multiple pushes to the same device/session
+        $uniqueEndpoints = [];
+        
         foreach ($subscriptions as $subJson) {
             $subData = json_decode($subJson, true);
-            if (!$subData) {
-                error_log("Push: Invalid subscription JSON for UserID: $userId");
+            if (!$subData || !isset($subData['endpoint'])) {
                 continue;
             }
+
+            $endpoint = $subData['endpoint'];
+            if (in_array($endpoint, $uniqueEndpoints)) {
+                continue;
+            }
+            $uniqueEndpoints[] = $endpoint;
 
             $subscription = Subscription::create($subData);
             $webPush->queueNotification($subscription, $payload);

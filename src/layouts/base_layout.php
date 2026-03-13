@@ -32,18 +32,18 @@ function startLayout($pageTitle = 'Turtle Dot', $user = null, $includeNavbar = t
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Serif:opsz,wght@8..144,300;400;500;600;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Serif:opsz,wght@8..144,300..700&display=swap"
             rel="stylesheet">
 
         <!-- PWA Manifest -->
-        <link rel="manifest" href="/manifest.json">
+        <link rel="manifest" href="/manifest.json?v=15">
         <meta name="theme-color" content="#10b981">
 
         <!-- PWA / iOS Tags -->
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="apple-mobile-web-app-title" content="Turtledot">
+        <meta name="apple-mobile-web-app-title" content="Turtledot Workspace">
         <link rel="apple-touch-icon" href="/assets/images/turtle_logo_192.png">
         <link rel="apple-touch-icon" sizes="152x152" href="/assets/images/turtle_logo_192.png">
         <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/turtle_logo_192.png">
@@ -214,7 +214,6 @@ function endLayout()
                             <span class="pulse-toast-time">${time}</span>
                         </div>
                         <div class="pulse-toast-body">${body}</div>
-                        <div class="pulse-toast-footer">Turtledot Workspace</div>
                     </div>
                 `;
 
@@ -226,10 +225,10 @@ function endLayout()
                 stack.prepend(toast);
                 setTimeout(() => {
                     if (toast.parentElement) {
-                        toast.style.animation = 'ios-out 0.4s forwards';
-                        setTimeout(() => toast.remove(), 400);
+                        toast.style.animation = 'ios-out 0.2s forwards';
+                        setTimeout(() => toast.remove(), 200);
                     }
-                }, 6000);
+                }, 5000); // Reduced display time slightly too for snappiness
             }
 
             async function updateBadgeCount() {
@@ -278,60 +277,65 @@ function endLayout()
             firebase.initializeApp(firebaseConfig);
             const messaging = firebase.messaging();
 
-            async function requestFCMToken() {
+            let isRegisteringFCM = false;
+            async function requestFCMToken(showToast = false) {
+                if (isRegisteringFCM) return;
+                console.log('Chat: Starting FCM registration...');
+                isRegisteringFCM = true;
                 try {
-                    // Wait for the service worker to be ready
+                    // Check environment
+                    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://');
+                    console.log('Chat: Environment IsStandalone:', isStandalone);
                     const reg = await navigator.serviceWorker.ready;
 
                     const permission = await Notification.requestPermission();
-                    if (permission === 'granted') {
-                        // 1. Get FCM Token (used for targeted FCM logic if needed)
-                        const token = await messaging.getToken({
-                            vapidKey: VAPID_PUBLIC_KEY || 'BMaKPqcVHa4nu58Vr41ychJtjt5fwzC3iAkr-pIQdUG_Veni0c57Kn45Gu8jdyuSEr-erUvyzo3hSSCaOMbR8kU',
-                            serviceWorkerRegistration: reg
-                        });
-                        console.log('FCM Token:', token);
+                if (permission === 'granted') {
+                    // 1. Get FCM Token
+                    const token = await messaging.getToken({
+                        vapidKey: VAPID_PUBLIC_KEY || 'BMaKPqcVHa4nu58Vr41ychJtjt5fwzC3iAkr-pIQdUG_Veni0c57Kn45Gu8jdyuSEr-erUvyzo3hSSCaOMbR8kU',
+                        serviceWorkerRegistration: reg
+                    });
 
-                        // 2. Handle Native Browser Push Subscription
-                        // Check for existing subscription first to avoid VAPID key mismatch errors
-                        let existingSub = await reg.pushManager.getSubscription();
-
-                        // We must explicitly compare keys - Firebase doesn't always handle this for us
-                        if (existingSub && VAPID_PUBLIC_KEY) {
-                            console.log('Chat: Verifying existing push subscription key...');
-
-                            // If keys don't match, or if we want to ensure freshness, unsubscribe
-                            try {
-                                const subscription = await reg.pushManager.subscribe({
-                                    userVisibleOnly: true,
-                                    applicationServerKey: VAPID_PUBLIC_KEY
-                                });
-                                await sendSubscriptionToServer(subscription, token);
-                            } catch (subErr) {
-                                // Mismatch error usually looks like InvalidStateError
-                                if (subErr.name === 'InvalidStateError' || subErr.message.includes('applicationServerKey')) {
-                                    console.warn('Chat: VAPID Key mismatch or stale subscription. Unsubscribing...');
-                                    await existingSub.unsubscribe();
-                                    const newSub = await reg.pushManager.subscribe({
-                                        userVisibleOnly: true,
-                                        applicationServerKey: VAPID_PUBLIC_KEY
-                                    });
-                                    await sendSubscriptionToServer(newSub, token);
-                                } else {
-                                    throw subErr;
-                                }
-                            }
-                        } else {
-                            console.log('Chat: Fresh subscription required');
-                            const subscription = await reg.pushManager.subscribe({
+                    // 2. Handle Native Browser Push Subscription
+                    // Always try to get existing first
+                    let sub = await reg.pushManager.getSubscription();
+                    console.log('Chat: Current push subscription:', sub ? 'Found' : 'Missing');
+                    
+                    // If we have an existing sub, we test it or refresh it
+                    if (sub) {
+                        try {
+                            await sendSubscriptionToServer(sub, token);
+                        } catch (e) {
+                            console.warn('Chat: Stale subscription, unsubscribing and retrying');
+                            await sub.unsubscribe();
+                            sub = await reg.pushManager.subscribe({
                                 userVisibleOnly: true,
                                 applicationServerKey: VAPID_PUBLIC_KEY
                             });
-                            await sendSubscriptionToServer(subscription, token);
+                            await sendSubscriptionToServer(sub, token);
                         }
+                    } else {
+                        console.log('Chat: Creating fresh push subscription');
+                        sub = await reg.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: VAPID_PUBLIC_KEY
+                        });
+                        await sendSubscriptionToServer(sub, token);
                     }
+
+                    // Mark as registered in this environment
+                    localStorage.setItem('fcm_registered_v1', 'true');
+                    console.log('Chat: FCM registration successful');
+
+                    // Clean up modal if visible
+                    const modal = document.getElementById('notif-permission-modal');
+                    if (modal) modal.remove();
+                    if (showToast && typeof Toast !== 'undefined') Toast.success('Success', 'Notifications enabled!');
+                }
                 } catch (e) {
                     console.error('Chat: FCM registration failed', e);
+                } finally {
+                    isRegisteringFCM = false;
                 }
             }
 
@@ -351,8 +355,92 @@ function endLayout()
                 });
             }
 
-            // Replacing old manual push sync with FCM
-            requestFCMToken();
+            // 🔔 Mandatory Notification Permission Modal
+            // Centered and premium-styled to ensure users enable alerts.
+            function initPermissionBanner() {
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+                if (!('Notification' in window)) return;
+                
+                const isRegistered = localStorage.getItem('fcm_registered_v1');
+                const permission = Notification.permission;
+                
+                // 1. If already granted, just ensure we're synced and exit
+                if (permission === 'granted') {
+                    if (!isRegistered) requestFCMToken(false);
+                    return;
+                }
+                
+                // 2. If denied, don't nag the user unless they were already registered and somehow lost permission
+                if (permission === 'denied') return;
+
+                // 3. Show modal if we haven't asked yet OR if we are in standalone mode and not yet registered
+                // This ensures that once installed, the user is immediately prompted to enable notifications.
+                if (permission === 'default' || (isStandalone && !isRegistered)) {
+                    // SESSION GUARD: Don't show again in the same session if dismissed
+                    if (sessionStorage.getItem('notif_modal_dismissed')) return;
+
+                    setTimeout(() => {
+                        if (document.getElementById('notif-permission-modal')) return;
+
+                        const modalHtml = `
+                        <div id="notif-permission-modal" style="
+                            position: fixed; inset: 0; z-index: 20000;
+                            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px);
+                            display: flex; align-items: center; justify-content: center;
+                            padding: 20px; animation: pulse-fade-in 0.2s ease;
+                        ">
+                            <div style="
+                                background: white; width: 100%; max-width: 360px;
+                                border-radius: 28px; padding: 32px; text-align: center;
+                                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                                animation: pulse-pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                            ">
+                                <div style="
+                                    width: 80px; height: 80px; background: #f0fdf4;
+                                    border-radius: 24px; display: flex; align-items: center;
+                                    justify-content: center; margin: 0 auto 24px;
+                                ">
+                                    <i class="fa-solid fa-bell-concierge" style="font-size: 32px; color: #10b981;"></i>
+                                </div>
+                                <h3 style="font-size: 1.5rem; font-weight: 800; color: #1e293b; margin-bottom: 12px; font-family: 'Inter', sans-serif;">
+                                    Enable Alerts
+                                </h3>
+                                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.6; margin-bottom: 32px; font-family: 'Inter', sans-serif;">
+                                    Stay connected with your team. We'll send you real-time updates and chat notifications.
+                                </p>
+                                <div style="display: flex; flex-direction: column; gap: 12px;">
+                                    <button onclick="document.getElementById('notif-permission-modal').remove(); requestFCMToken(true)" style="
+                                        width: 100%; padding: 16px; border: none;
+                                        background: #10b981; color: white; border-radius: 16px;
+                                        font-weight: 700; font-size: 1rem; cursor: pointer;
+                                        box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+                                        transition: transform 0.2s ease;
+                                    ">Allow Notifications</button>
+                                    <button onclick="sessionStorage.setItem('notif_modal_dismissed', 'true'); document.getElementById('notif-permission-modal').remove()" style="
+                                        width: 100%; padding: 12px; border: none;
+                                        background: transparent; color: #94a3b8; border-radius: 16px;
+                                        font-weight: 600; font-size: 0.9rem; cursor: pointer;
+                                    ">Maybe Later</button>
+                                </div>
+                            </div>
+                        </div>
+                        <style>
+                            @keyframes pulse-fade-in { from { opacity: 0; } to { opacity: 1; } }
+                            @keyframes pulse-pop-in { 
+                                from { opacity: 0; transform: scale(0.9); } 
+                                to { opacity: 1; transform: scale(1); } 
+                            }
+                        </style>`;
+                        document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    }, 500);
+                }
+            }
+
+            if (document.readyState === 'complete') {
+                initPermissionBanner();
+            } else {
+                window.addEventListener('load', initPermissionBanner);
+            }
 
             // Handle messages when app is in foreground
             messaging.onMessage((payload) => {
@@ -414,19 +502,24 @@ function endLayout()
 
             let deferredPrompt;
 
-            // ── Detect iOS ──────────────────────────────────────────────
-            const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-            const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
-                || window.navigator.standalone;
+            window.addEventListener('load', () => {
+                const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+                const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-            // iOS: Never fires beforeinstallprompt — show the button manually
-            if (isIos && !isInStandaloneMode) {
+                if (isStandalone) return;
+
                 const installBtns = document.querySelectorAll('.pwa-install-btn');
-                installBtns.forEach(btn => {
-                    btn.style.display = 'flex';
-                    btn.setAttribute('data-ios', 'true');
-                });
-            }
+                
+                // Show if iOS OR Mac Safari (since they don't fire beforeinstallprompt)
+                if (isIos || (isMac && isSafari)) {
+                    installBtns.forEach(btn => {
+                        btn.style.display = 'flex';
+                        btn.setAttribute('data-device', isIos ? 'ios' : 'mac-safari');
+                    });
+                }
+            });
 
             // Android / Chrome: fires beforeinstallprompt
             window.addEventListener('beforeinstallprompt', (e) => {
@@ -435,7 +528,7 @@ function endLayout()
                 const installBtns = document.querySelectorAll('.pwa-install-btn');
                 installBtns.forEach(btn => {
                     btn.style.display = 'flex';
-                    btn.removeAttribute('data-ios');
+                    btn.removeAttribute('data-device');
                 });
             });
 
@@ -447,15 +540,24 @@ function endLayout()
 
             async function installPWA() {
                 const btn = document.querySelector('.pwa-install-btn');
-                const isIosBtn = btn && btn.getAttribute('data-ios') === 'true';
+                const device = btn ? btn.getAttribute('data-device') : null;
 
-                if (isIosBtn) {
-                    // Show iOS-specific guide modal
+                if (device === 'ios') {
                     showIosInstallGuide();
                     return;
                 }
 
-                if (!deferredPrompt) return;
+                if (device === 'mac-safari') {
+                    showMacInstallGuide();
+                    return;
+                }
+
+                if (!deferredPrompt) {
+                    // Fallback Guide if nothing triggered
+                    showMacInstallGuide();
+                    return;
+                }
+                
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 deferredPrompt = null;
@@ -464,56 +566,97 @@ function endLayout()
             }
 
             function showIosInstallGuide() {
-                const existing = document.getElementById('ios-install-modal');
-                if (existing) { existing.style.display = 'flex'; return; }
+                const existing = document.getElementById('pwa-install-modal');
+                if (existing) { existing.remove(); }
 
                 const modal = document.createElement('div');
-                modal.id = 'ios-install-modal';
+                modal.id = 'pwa-install-modal';
                 modal.style.cssText = `
                     position: fixed; inset: 0; z-index: 99999;
-                    background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
-                    display: flex; align-items: flex-end; justify-content: center;
-                    padding: 1rem;
+                    background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px);
+                    display: flex; align-items: center; justify-content: center;
+                    padding: 1.5rem;
                 `;
                 modal.innerHTML = `
                     <div style="
-                        background: white; border-radius: 24px; padding: 2rem;
-                        max-width: 420px; width: 100%; text-align: center;
-                        animation: slideUp 0.3s ease;
+                        background: white; border-radius: 32px; padding: 2.5rem;
+                        max-width: 440px; width: 100%; text-align: center;
+                        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+                        animation: pulse-pop-in 0.3s ease;
                     ">
-                        <img src="/assets/images/turtle_logo_192.png"
-                             style="width: 72px; height: 72px; border-radius: 18px; margin-bottom: 1rem;">
-                        <h3 style="font-size: 1.2rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem;">
-                            Install Turtledot
+                        <img src="/assets/images/turtle_logo_512.png" 
+                             style="width: 80px; height: 80px; border-radius: 22px; margin-bottom: 1.5rem; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
+                        <h3 style="font-size: 1.5rem; font-weight: 800; color: #1e293b; margin-bottom: 0.75rem;">
+                            Install Mobile App
                         </h3>
-                        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1.5rem;">
-                            Add this app to your Home Screen for the best experience.
+                        <p style="color: #64748b; font-size: 1rem; line-height: 1.6; margin-bottom: 2rem;">
+                            Get a native experience with real-time notifications by adding Turtledot to your home screen.
                         </p>
-                        <div style="background: #f8fafc; border-radius: 16px; padding: 1.25rem; text-align: left; margin-bottom: 1.5rem;">
-                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                                <div style="font-size: 1.5rem;">1️⃣</div>
-                                <div>Tap the <strong>Share</strong> button
-                                    <span style="display: inline-block; background: #e2e8f0; border-radius: 6px; padding: 2px 8px; font-size: 0.85rem;">⬆</span>
-                                    at the bottom of Safari
-                                </div>
+                        <div style="background: #f8fafc; border-radius: 20px; padding: 1.5rem; text-align: left; margin-bottom: 2rem;">
+                            <div style="display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.25rem;">
+                                <div style="width: 32px; height: 32px; background: #e0f2fe; color: #0ea5e9; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700;">1</div>
+                                <div style="font-size: 0.95rem; color: #334155;">Tap the <strong>Share</strong> button <i class="fa-solid fa-arrow-up-from-bracket" style="color: #0ea5e9; margin-left: 4px;"></i> at the bottom.</div>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="font-size: 1.5rem;">2️⃣</div>
-                                <div>Scroll down and tap <strong>"Add to Home Screen"</strong></div>
+                            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                                <div style="width: 32px; height: 32px; background: #f0fdf4; color: #10b981; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700;">2</div>
+                                <div style="font-size: 0.95rem; color: #334155;">Select <strong>"Add to Home Screen"</strong> from the menu.</div>
                             </div>
                         </div>
-                        <button onclick="document.getElementById('ios-install-modal').style.display='none''"
-                            style="
-                                width: 100%; padding: 0.9rem; border: none;
-                                background: #10b981; color: white; border-radius: 14px;
-                                font-weight: 700; font-size: 1rem; cursor: pointer;
-                            ">Got it!</button>
+                        <button onclick="document.getElementById('pwa-install-modal').remove()" 
+                            style="width: 100%; padding: 1rem; border: none; background: #10b981; color: white; border-radius: 16px; font-weight: 700; font-size: 1.1rem; cursor: pointer;">
+                            Got it!
+                        </button>
                     </div>
                 `;
                 document.body.appendChild(modal);
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) modal.style.display = 'none';
-                });
+                modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+            }
+
+            function showMacInstallGuide() {
+                const existing = document.getElementById('pwa-install-modal');
+                if (existing) { existing.remove(); }
+
+                const modal = document.createElement('div');
+                modal.id = 'pwa-install-modal';
+                modal.style.cssText = `
+                    position: fixed; inset: 0; z-index: 99999;
+                    background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px);
+                    display: flex; align-items: center; justify-content: center;
+                    padding: 1.5rem;
+                `;
+                modal.innerHTML = `
+                    <div style="
+                        background: white; border-radius: 32px; padding: 2.5rem;
+                        max-width: 480px; width: 100%; text-align: center;
+                        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+                        animation: pulse-pop-in 0.3s ease;
+                    ">
+                        <img src="/assets/images/turtle_logo_512.png" 
+                             style="width: 80px; height: 80px; border-radius: 22px; margin-bottom: 1.5rem; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
+                        <h3 style="font-size: 1.5rem; font-weight: 800; color: #1e293b; margin-bottom: 0.75rem;">
+                            Install Desktop Workstation
+                        </h3>
+                        <p style="color: #64748b; font-size: 1rem; line-height: 1.6; margin-bottom: 2rem;">
+                            Turn Turtledot into a standalone Mac application for optimized performance and native notifications.
+                        </p>
+                        <div style="background: #f8fafc; border-radius: 20px; padding: 1.5rem; text-align: left; margin-bottom: 2rem;">
+                            <div style="display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.25rem;">
+                                <div style="width: 32px; height: 32px; background: #e0f2fe; color: #0ea5e9; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700;">1</div>
+                                <div style="font-size: 0.95rem; color: #334155;">In your browser's top menu, go to <strong>File</strong>.</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                                <div style="width: 32px; height: 32px; background: #f0fdf4; color: #10b981; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700;">2</div>
+                                <div style="font-size: 0.95rem; color: #334155;">Click <strong>"Add to Dock"</strong> or <strong>"Install Turtledot"</strong>.</div>
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('pwa-install-modal').remove()" 
+                            style="width: 100%; padding: 1rem; border: none; background: #10b981; color: white; border-radius: 16px; font-weight: 700; font-size: 1.1rem; cursor: pointer;">
+                            Launch Desktop App
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
             }
 
             async function logout() {

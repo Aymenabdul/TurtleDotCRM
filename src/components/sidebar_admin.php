@@ -16,6 +16,7 @@ $contextTeamId = $_GET['team_id'] ?? $_GET['id'] ?? $_SESSION['last_team_id'] ??
 if (!$contextTeamId && !empty($sidebarTeams)) {
     $contextTeamId = $sidebarTeams[0]['id'];
 }
+
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-glass"></div>
@@ -131,10 +132,13 @@ if (!$contextTeamId && !empty($sidebarTeams)) {
                     <i class="fa-solid fa-user"></i>
                     <span>Profile Settings</span>
                 </a>
+
+                <!-- 🚀 Persistent Desktop Install Button (PWA) -->
                 <button class="dropdown-item pwa-install-btn" onclick="installPWA()" style="display: none;">
-                    <i class="fa-solid fa-cloud-arrow-down"></i>
-                    <span>Download App</span>
+                    <i class="fa-solid fa-download"></i>
+                    <span>Install App</span>
                 </button>
+
                 <div style="height: 1px; background: #e2e8f0; margin: 4px 0;"></div>
                 <button onclick="logout()" class="dropdown-item danger">
                     <i class="fa-solid fa-sign-out-alt"></i>
@@ -142,5 +146,11 @@ if (!$contextTeamId && !empty($sidebarTeams)) {
                 </button>
             </div>
         </div>
+
+        <style>
+            @media (max-width: 1024px) {
+                .pc-app-download { display: none !important; }
+            }
+        </style>
     </div>
 </aside>

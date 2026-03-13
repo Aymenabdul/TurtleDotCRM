@@ -1,11 +1,24 @@
 {
-  "name": "Turtledot CRM",
+  "id": "turtledot-workspace-app",
+  "name": "Turtledot Workspace",
   "short_name": "Turtledot",
   "description": "Professional Lead Management and Real-time Chat Workspace",
-  "start_url": "/index.php",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
   "background_color": "#10b981",
   "theme_color": "#10b981",
+  "categories": [
+    "business",
+    "productivity",
+    "social"
+  ],
   "icons": [
     {
       "src": "/assets/images/turtle_logo_192.png",
@@ -19,5 +32,29 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/images/turtle_logo_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Turtledot Workspace - Lead Management"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Pulse Chat",
+      "short_name": "Chat",
+      "url": "/tools/chat.php",
+      "icon": [{ "src": "/assets/images/turtle_logo_192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Archive Vault",
+      "short_name": "Vault",
+      "url": "/tools/files.php",
+      "icon": [{ "src": "/assets/images/turtle_logo_192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
 }
